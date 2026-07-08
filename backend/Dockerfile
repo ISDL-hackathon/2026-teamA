@@ -6,12 +6,13 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
   build-essential \
   postgresql-client \
+  libpq-dev \
   git \
   && rm -rf /var/lib/apt/lists/*
 
 # Gemfile をコピーして依存パッケージをインストール
-COPY Gemfile Gemfile.lock* ./
-RUN gem install bundler && bundle install --jobs 4 --retry 3
+COPY Gemfile ./
+RUN gem install bundler:2.4.0 && bundle install --jobs 4 --retry 5
 
 # アプリケーションコードをコピー
 COPY . .

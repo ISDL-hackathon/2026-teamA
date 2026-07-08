@@ -1,7 +1,7 @@
 source "https://rubygems.org"
 git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
-ruby "3.2.0"
+ruby "3.2.11"
 
 # Rails
 gem "rails", "~> 7.0.0"
@@ -9,7 +9,7 @@ gem "pg", "~> 1.1"
 gem "puma", "~> 5.0"
 
 # 認証
-gem "auth0-ruby", "~> 3.0"
+gem "omniauth-auth0", "~> 3.0"
 gem "jwt", "~> 2.7"
 
 # API
@@ -17,7 +17,7 @@ gem "active_model_serializers", "~> 0.10.0"
 gem "rack-cors"
 
 # バリデーション
-gem "validate_email", "~> 1.0"
+gem "validates_email_format_of", "~> 1.8"
 
 # リアルタイム通信
 gem "redis", "~> 5.0"
