@@ -1,0 +1,33 @@
+<main class="min-h-screen bg-base-200 text-base-content">
+  <section class="hero min-h-screen px-6">
+    <div class="hero-content w-full max-w-5xl justify-start">
+      <div class="max-w-xl">
+        <p class="mb-3 text-sm font-semibold uppercase tracking-wide text-primary">Room Portal</p>
+        <h1 class="mb-5 text-4xl font-bold leading-tight sm:text-5xl">研究室 3D ポータル</h1>
+        <p class="mb-8 text-base text-base-content/70">
+          ログインしてください
+        </p>
+
+        <% if alert.present? %>
+          <div class="alert alert-error mb-5">
+            <span><%= alert %></span>
+          </div>
+        <% end %>
+
+        <% auth0_ready = ENV["AUTH0_DOMAIN"].present? && ENV["AUTH0_CLIENT_ID"].present? && ENV["AUTH0_CLIENT_SECRET"].present? %>
+
+        <% unless auth0_ready %>
+          <div class="alert alert-warning mb-5">
+            <span>Auth0 の環境変数が未設定です。</span>
+          </div>
+        <% end %>
+
+        <% if auth0_ready %>
+          <%= button_to "Auth0 でログイン", "/auth/auth0", method: :post, class: "btn btn-primary btn-wide" %>
+        <% else %>
+          <button class="btn btn-primary btn-wide" disabled>Auth0 でログイン</button>
+        <% end %>
+      </div>
+    </div>
+  </section>
+</main>
