@@ -37,22 +37,16 @@ notepad .env
 code .env
 ```
 
-設定内容：
+### 3. 右下の`CRLF`を`LF`に変更
+<img width="137" height="56" alt="Image" src="https://github.com/user-attachments/assets/840b786c-af36-48aa-bff5-2f6ca670b513" />
 
-```env
-AUTH0_DOMAIN=your-auth0-domain.auth0.com
-AUTH0_CLIENT_ID=your-client-id
-AUTH0_CLIENT_SECRET=your-client-secret
-API_KEY=dev-api-key
-```
-
-### 3. Docker で起動
+### 4. Docker で起動
 
 ```bash
 docker-compose up --build
 ```
 
-### 4. ブラウザでアクセス
+### 5. ブラウザでアクセス
 
 ```
 http://localhost:3000
