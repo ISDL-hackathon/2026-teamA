@@ -1,8 +1,230 @@
-<div class="w-full h-screen bg-gray-900">
-  <canvas id="canvas-3d"></canvas>
+<style>
+  .portal-shell { position: relative; min-height: 100vh; overflow: hidden; background: #101418; color: #f8fafc; }
+  #canvas-3d { position: fixed; inset: 0; z-index: 0; width: 100vw; height: 100vh; }
+  .portal-topbar, .portal-sidebar { position: fixed; z-index: 2147483647; }
+  .portal-topbar { top: 18px; left: 22px; right: 22px; display: flex; justify-content: space-between; gap: 16px; pointer-events: none; }
+  .portal-topbar .topbar-actions { pointer-events: auto; }
+  .portal-sidebar { left: 22px; bottom: 22px; display: grid; gap: 10px; width: min(280px, calc(100vw - 44px)); pointer-events: auto; }
+  .portal-action { display: grid; gap: 4px; min-height: 62px; padding: 14px 16px; border: 1px solid rgba(255,255,255,.22); border-radius: 8px; color: #f8fafc; background: rgba(15,23,42,.88); text-align: left; cursor: pointer; box-shadow: 0 12px 34px rgba(0,0,0,.35); }
+  .portal-action span { color: #93c5fd; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+</style>
+
+<div class="portal-shell">
+  <canvas id="canvas-3d" aria-label="研究室 3D 空間"></canvas>
+
+  <header class="portal-topbar">
+    <div>
+      <p class="portal-kicker">Room Portal</p>
+      <h1>研究室 3D ポータル</h1>
+    </div>
+    <div class="topbar-actions flex items-center gap-3">
+      <div class="portal-status" id="room-status"><%= current_user&.name || "API 準備中" %></div>
+      <%= button_to "Logout", logout_path, method: :delete, class: "btn btn-sm btn-outline" %>
+    </div>
+  </header>
+
+  <nav class="portal-sidebar" aria-label="機能メニュー">
+    <button class="portal-action btn btn-outline justify-start" type="button" data-panel="music-panel">
+      <span>Music</span>
+      お気に入り曲
+    </button>
+    <button class="portal-action btn btn-outline justify-start" type="button" data-panel="card-panel">
+      <span>Card</span>
+      カード登録
+    </button>
+    <button class="portal-action btn btn-outline justify-start" type="button" data-panel="dashboard-panel">
+      <span>Stay</span>
+      滞在ログ
+    </button>
+    <button class="portal-action btn btn-outline justify-start" type="button" data-panel="queue-panel">
+      <span>Queue</span>
+      選曲実行
+    </button>
+  </nav>
+
+  <dialog class="portal-modal modal" id="music-panel">
+    <div class="modal-box portal-glass">
+    <form method="dialog">
+      <button class="modal-close btn btn-sm btn-circle btn-ghost" aria-label="閉じる">x</button>
+    </form>
+    <h2 class="portal-panel-title">お気に入り曲</h2>
+    <div class="inline-form">
+      <input id="music-search-input" class="input input-bordered" type="search" placeholder="曲名またはアーティスト名" autocomplete="off">
+      <button id="music-search-button" class="btn btn-primary" type="button">検索</button>
+    </div>
+    <section>
+      <h3>検索結果</h3>
+      <div class="list-panel" id="music-search-results"></div>
+    </section>
+    <section>
+      <h3>登録済み</h3>
+      <div class="list-panel" id="favorite-tracks"></div>
+    </section>
+    </div>
+  </dialog>
+
+  <dialog class="portal-modal modal" id="card-panel">
+    <div class="modal-box portal-glass">
+    <form method="dialog">
+      <button class="modal-close btn btn-sm btn-circle btn-ghost" aria-label="閉じる">x</button>
+    </form>
+    <h2 class="portal-panel-title">カード登録</h2>
+    <div class="inline-form">
+      <input id="card-idm-input" class="input input-bordered" type="text" placeholder="0123456789ABCDEF" autocomplete="off">
+      <button id="card-register-button" class="btn btn-primary" type="button">登録</button>
+    </div>
+    <p class="muted">登録後、ローカル FeliCa クライアントの打刻 API で入退室が記録されます。</p>
+    </div>
+  </dialog>
+
+  <dialog class="portal-modal modal" id="dashboard-panel">
+    <div class="modal-box portal-glass">
+    <form method="dialog">
+      <button class="modal-close btn btn-sm btn-circle btn-ghost" aria-label="閉じる">x</button>
+    </form>
+    <h2 class="portal-panel-title">滞在ログ</h2>
+    <div class="list-panel" id="access-log-list"></div>
+    </div>
+  </dialog>
+
+  <dialog class="portal-modal modal" id="queue-panel">
+    <div class="modal-box portal-glass">
+    <form method="dialog">
+      <button class="modal-close btn btn-sm btn-circle btn-ghost" aria-label="閉じる">x</button>
+    </form>
+    <h2 class="portal-panel-title">選曲実行</h2>
+    <button id="queue-play-button" type="button" class="wide-button btn btn-primary">ルーレットで曲を選ぶ</button>
+    <pre id="queue-result" class="result-box"></pre>
+    </div>
+  </dialog>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="/3d_room.js"></script>
+<script>
+  const apiBase = "/api/v1";
+
+  document.querySelectorAll("[data-panel]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const panel = document.getElementById(button.dataset.panel);
+      panel.showModal();
+      if (button.dataset.panel === "music-panel") loadFavoriteTracks();
+      if (button.dataset.panel === "dashboard-panel") loadAccessLogs();
+    });
+  });
+
+  document.getElementById("music-search-button").addEventListener("click", searchTracks);
+  document.getElementById("music-search-input").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") searchTracks();
+  });
+
+  document.getElementById("card-register-button").addEventListener("click", async () => {
+    const idm = document.getElementById("card-idm-input").value.trim();
+    if (!idm) return setStatus("IDm を入力してください");
+
+    const response = await fetch(`${apiBase}/cards`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idm }),
+    });
+    const data = await response.json();
+    setStatus(data.status === "success" ? "カードを登録しました" : data.message);
+  });
+
+  document.getElementById("queue-play-button").addEventListener("click", async () => {
+    const response = await fetch(`${apiBase}/alexa/play_queue`, { method: "POST" });
+    const data = await response.json();
+    document.getElementById("queue-result").textContent = JSON.stringify(data, null, 2);
+  });
+
+  async function searchTracks() {
+    const query = document.getElementById("music-search-input").value.trim();
+    if (!query) return;
+
+    setStatus("検索中");
+    const response = await fetch(`${apiBase}/spotify/search?q=${encodeURIComponent(query)}`);
+    const data = await response.json();
+    const container = document.getElementById("music-search-results");
+
+    if (data.status !== "success") {
+      container.innerHTML = `<p class="muted">${escapeHtml(data.message || "検索に失敗しました")}</p>`;
+      return;
+    }
+
+    container.innerHTML = data.results.map((track) => `
+      <article class="track-row">
+        <div>
+          <strong>${escapeHtml(track.track_name)}</strong>
+          <span>${escapeHtml(track.artist_name || "")}</span>
+        </div>
+        <button type="button" data-track="${encodeURIComponent(JSON.stringify(track))}">追加</button>
+      </article>
+    `).join("") || `<p class="muted">該当する曲がありません</p>`;
+
+    container.querySelectorAll("[data-track]").forEach((button) => {
+      button.addEventListener("click", () => addTrack(JSON.parse(decodeURIComponent(button.dataset.track))));
+    });
+    setStatus("検索完了");
+  }
+
+  async function addTrack(track) {
+    const response = await fetch(`${apiBase}/spotify/tracks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ track }),
+    });
+    const data = await response.json();
+    setStatus(data.status === "success" ? "曲を追加しました" : data.message);
+    loadFavoriteTracks();
+  }
+
+  async function loadFavoriteTracks() {
+    const response = await fetch(`${apiBase}/spotify/tracks`);
+    const data = await response.json();
+    const container = document.getElementById("favorite-tracks");
+    container.innerHTML = data.tracks.map((track) => `
+      <article class="track-row">
+        <div>
+          <strong>${escapeHtml(track.track_name)}</strong>
+          <span>${escapeHtml(track.artist_name)}</span>
+        </div>
+        <button type="button" data-remove-track="${track.id}">削除</button>
+      </article>
+    `).join("") || `<p class="muted">登録済みの曲はありません</p>`;
+
+    container.querySelectorAll("[data-remove-track]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        await fetch(`${apiBase}/spotify/tracks/${button.dataset.removeTrack}`, { method: "DELETE" });
+        loadFavoriteTracks();
+      });
+    });
+  }
+
+  async function loadAccessLogs() {
+    const response = await fetch(`${apiBase}/access_logs`);
+    const data = await response.json();
+    const container = document.getElementById("access-log-list");
+    container.innerHTML = data.logs.map((log) => `
+      <article class="track-row">
+        <div>
+          <strong>${log.action_type === "in" ? "入室" : "退室"}</strong>
+          <span>${new Date(log.timestamp).toLocaleString()}</span>
+        </div>
+      </article>
+    `).join("") || `<p class="muted">滞在ログはまだありません</p>`;
+  }
+
+  function setStatus(message) {
+    document.getElementById("room-status").textContent = message;
+  }
+
+  function escapeHtml(value) {
+    const div = document.createElement("div");
+    div.textContent = value || "";
+    return div.innerHTML;
+  }
+
+  setStatus("API 接続待機中");
+</script>
