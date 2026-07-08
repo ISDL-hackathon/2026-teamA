@@ -1,7 +1,29 @@
 Rails.application.routes.draw do
-  get 'laboratories/show'
-  # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
-  root "laboratories#show"
-  # Defines the root path route ("/")
-  # root "articles#index"
+  root "auth#login"
+
+  get "login", to: "auth#login"
+  get "auth/auth0/callback", to: "auth#callback"
+  get "auth/failure", to: "auth#failure"
+  delete "logout", to: "auth#logout"
+  get "logout", to: "auth#logout"
+
+  get "portal", to: "laboratories#show"
+  get "laboratories/show"
+
+  namespace :api do
+    namespace :v1 do
+      post "scan", to: "scans#create"
+      resources :cards, only: [:create]
+      resources :access_logs, only: [:index]
+
+      namespace :spotify do
+        get "search", to: "tracks#search"
+        resources :tracks, only: [:index, :create, :destroy]
+      end
+
+      namespace :alexa do
+        post "play_queue", to: "queues#create"
+      end
+    end
+  end
 end

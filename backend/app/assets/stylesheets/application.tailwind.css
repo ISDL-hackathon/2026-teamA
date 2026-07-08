@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .portal-glass {
+    @apply border border-white/15 bg-slate-950/80 shadow-2xl backdrop-blur;
+  }
+
+  .portal-panel-title {
+    @apply text-lg font-semibold text-slate-100;
+  }
+}
