@@ -37,6 +37,9 @@ notepad .env
 code .env
 ```
 
+### 3. 右下の`CRLF`を`LF`に変更
+
+
 ### 3. Docker で起動
 
 ```bash
