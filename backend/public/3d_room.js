@@ -33,7 +33,7 @@ scene.add(directionalLight);
 // Load GLB Model
 const loader = new THREE.GLTFLoader();
 loader.load(
-  "/Scaniverse_test.glb",
+  "/KC104.glb",
   (gltf) => {
     const model = gltf.scene;
     model.scale.set(1, 1, 1);
