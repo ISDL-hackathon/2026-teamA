@@ -73,35 +73,34 @@ docker-compose exec web bundle exec rails db:migrate
 ```
 # github 使用方法
 
-## Issues 作成
-'new issue'でタスクごとにissueを作成
-<img width="500" height="678" alt="Image" src="https://github.com/user-attachments/assets/8d1d61ca-20b3-4376-b906-c572b96ebcbe" />
+### Issues 作成
+'new issue'でタスクごとにissueを作成</br>
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/8d1d61ca-20b3-4376-b906-c572b96ebcbe" />
 
-## ブランチ切る
+### ブランチ切る
 issueの画面でブランチを切るボタンを押す．
 'create branch'のボタンを押すとその指示に従ってブランチ切る
 <img width="403" height="135" alt="Image" src="https://github.com/user-attachments/assets/8d6c4434-f860-4244-897a-bbc264a82097" />
 
+```bash
+git checkout ＜ブランチ名＞
+```
 
+###  今自分がどのブランチにいるか
 ```bash
 git branch
 ```
+### ファイル変更完了後コミット
+vscodeの左上のcommitボタンでコミット
 
-##  今自分がどのブランチにいるか
-```bash
-git branch
-```
-## ファイル変更完了後コミット
-
-## プッシュ
+### プッシュ
 ```bash
 git push
 ```
 
-## プルリク出す
+### プルリク出す
+githubのページの上のpull request タブに行き緑のボタンおす
 ※mergeはレビューしてもらってするので，自分ではしない
-
-
 
 
 
