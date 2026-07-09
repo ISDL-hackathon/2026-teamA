@@ -71,6 +71,35 @@ docker-compose exec web bundle exec rails console
 # マイグレーション実行
 docker-compose exec web bundle exec rails db:migrate
 ```
+# github 使用方法
+
+## Issues 作成
+
+## ブランチ切る
+
+```bash
+git branch
+```
+
+##  今自分がどのブランチにいるか
+```bash
+git branch
+```
+## ファイル変更完了後コミット
+
+## プッシュ
+```bash
+git push
+```
+
+## プルリク出す
+※mergeはレビューしてもらってするので，自分ではしない
+
+
+
+
+
+
 
 ## トラブルシューティング
 
