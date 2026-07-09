@@ -74,8 +74,11 @@ docker-compose exec web bundle exec rails db:migrate
 # github 使用方法
 
 ## Issues 作成
+'new issue'でタスクごとにissueを作成
+<img width="500" height="678" alt="Image" src="https://github.com/user-attachments/assets/8d1d61ca-20b3-4376-b906-c572b96ebcbe" />
 
 ## ブランチ切る
+issueの画面でブランチを切るボタンを押す．
 
 ```bash
 git branch
