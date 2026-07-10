@@ -2,7 +2,7 @@ class AuthController < ApplicationController
   skip_before_action :verify_authenticity_token, only: :callback
 
   def login
-    redirect_to portal_path if logged_in?
+    redirect_to(current_user.profile_complete? ? portal_path : setup_path) if logged_in?
   end
 
   def callback
@@ -17,11 +17,19 @@ class AuthController < ApplicationController
     user.save!
 
     session[:user_id] = user.id
-    redirect_to portal_path
+    redirect_to user.profile_complete? ? portal_path : setup_path
   end
 
   def failure
-    redirect_to login_path, alert: params[:message].presence || "Auth0 login failed"
+    flash[:alert] = params[:error_description].presence ||
+                    params[:message].presence ||
+                    "指定されたドメインではログインできません。"
+
+    if auth0_configured?
+      redirect_to "/auth/auth0?prompt=login", allow_other_host: true
+    else
+      redirect_to login_path
+    end
   end
 
   def logout
@@ -30,6 +38,12 @@ class AuthController < ApplicationController
   end
 
   private
+
+  def auth0_configured?
+    ENV["AUTH0_DOMAIN"].present? &&
+      ENV["AUTH0_CLIENT_ID"].present? &&
+      ENV["AUTH0_CLIENT_SECRET"].present?
+  end
 
   def auth0_logout_url
     domain = ENV.fetch("AUTH0_DOMAIN", nil)

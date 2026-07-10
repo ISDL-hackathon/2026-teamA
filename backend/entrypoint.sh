@@ -11,8 +11,12 @@ echo 'PostgreSQL started'
 echo 'Checking and installing gems...'
 bundle install
 
-echo 'Checking and installing node packages...'
-npm install
+if [ ! -d /app/node_modules/.bin ]; then
+  echo 'Installing node packages...'
+  npm ci
+fi
+
+echo 'Building CSS...'
 npm run build:css
 
 # マイグレーション実行

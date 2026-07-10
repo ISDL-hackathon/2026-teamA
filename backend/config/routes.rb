@@ -7,6 +7,10 @@ Rails.application.routes.draw do
   delete "logout", to: "auth#logout"
   get "logout", to: "auth#logout"
 
+  get "setup", to: "profiles#edit"
+  patch "setup", to: "profiles#update"
+  delete "setup", to: "auth#logout"
+
   get "portal", to: "laboratories#show"
   get "laboratories/show"
 

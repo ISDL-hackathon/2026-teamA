@@ -3,6 +3,7 @@
 .env
 !.gitignore
 node_modules
+backend/node_modules/
 
 # バックエンド（Rails）
 backend/.bundle/

@@ -6,6 +6,10 @@ class User < ApplicationRecord
   validates :name, presence: true
   validates :email, presence: true, uniqueness: true
 
+  def profile_complete?
+    name_confirmed? && name.present? && felica_cards.exists?
+  end
+
   def last_access_log
     room_access_logs.order(timestamp: :desc).first
   end

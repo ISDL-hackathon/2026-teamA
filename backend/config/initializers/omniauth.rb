@@ -17,5 +17,6 @@ if auth0_domain.present? && auth0_client_id.present? && auth0_client_secret.pres
   end
 end
 
-OmniAuth.config.allowed_request_methods = %i[post]
+OmniAuth.config.allowed_request_methods = %i[get post]
 OmniAuth.config.silence_get_warning = true
+OmniAuth.config.failure_raise_out_environments = []
