@@ -12,10 +12,11 @@
   .portal-action[data-open-music] { cursor: pointer; }
   .portal-action[data-open-music]:hover { border-color: rgba(147,197,253,.62); background: rgba(15,23,42,.96); }
   .portal-action span { color: #93c5fd; font-size: 12px; font-weight: 700; text-transform: uppercase; }
-  .portal-sidebar.is-hidden { display: none; }
   .music-panel { display: none; top: 50%; left: 50%; width: min(960px, calc(100vw - 48px)); max-height: min(620px, calc(100vh - 48px)); overflow: auto; padding: 28px; border: 1px solid rgba(148,163,184,.35); border-radius: 8px; background: rgba(20,26,32,.94); box-shadow: 0 24px 80px rgba(0,0,0,.42); backdrop-filter: blur(12px); transform: translate(-50%, -50%); pointer-events: auto; }
   .music-panel.is-open { display: block; }
+  .music-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
   .music-panel h2 { margin: 0 0 16px; font-size: 24px; }
+  .music-panel-header h2 { margin: 0; }
   .music-panel h3 { margin: 20px 0 10px; color: #bae6fd; font-size: 15px; }
   .inline-form { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
   .inline-form input { min-width: 0; padding: 12px 13px; border: 1px solid rgba(148,163,184,.35); border-radius: 8px; color: #f8fafc; background: #0f141a; }
@@ -70,7 +71,10 @@
   </nav>
 
   <section class="music-panel" id="music-panel" aria-label="楽曲検索・登録">
-    <h2>楽曲検索・登録</h2>
+    <div class="music-panel-header">
+      <h2>楽曲検索・登録</h2>
+      <button class="btn btn-sm btn-outline" type="button" data-close-music>閉じる</button>
+    </div>
     <% unless @spotify_env_ready %>
       <p class="muted">Spotify 検索を使うには .env に SPOTIFY_CLIENT_ID と SPOTIFY_CLIENT_SECRET を設定してください。</p>
     <% end %>
@@ -121,7 +125,6 @@
 <script>
   const apiBase = "/api/v1";
   const musicPanel = document.getElementById("music-panel");
-  const portalSidebar = document.getElementById("portal-sidebar");
   const musicSearchInput = document.getElementById("music-search-input");
   const favoriteTrackIds = new Set(
     Array.from(document.querySelectorAll("[data-favorite-track-id]")).map((element) => element.dataset.favoriteTrackId)
@@ -129,8 +132,11 @@
 
   document.querySelector("[data-open-music]").addEventListener("click", () => {
     musicPanel.classList.add("is-open");
-    portalSidebar.classList.add("is-hidden");
     musicSearchInput.focus();
+  });
+  document.querySelector("[data-close-music]").addEventListener("click", () => {
+    musicPanel.classList.remove("is-open");
+    setStatus("<%= j current_user.name %>");
   });
   document.getElementById("music-search-button").addEventListener("click", searchTracks);
   musicSearchInput.addEventListener("keydown", (event) => {
