@@ -45,7 +45,7 @@ module Api
 
         def spotify_account
           @spotify_account = current_user.spotify_account || current_user.create_spotify_account!(
-            spotify_user_id: "demo-#{current_user.id}",
+            spotify_user_id: "user-#{current_user.id}",
             token_expires_at: 1.hour.from_now
           )
         end
