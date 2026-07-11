@@ -123,3 +123,7 @@ docker-compose up
 docker-compose down -v
 docker-compose up --build
 ```
+## メモ
+```bash
+py scripts\pasori_rcs300_reader.py
+```
