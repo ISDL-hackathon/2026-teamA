@@ -9,7 +9,7 @@ const camera = new THREE.PerspectiveCamera(
   0.1, 
   1000, 
 ); 
-camera.position.set(0, 2, 6.5); 
+camera.position.set(0, 2.75, 0); 
 camera.lookAt(0, 1, 0); 
   
 // Renderer 
@@ -61,6 +61,7 @@ let avatar = null;
 let avatarMixer = null; 
 let avatarActions = [];
 let currentAvatarAction = null;
+let avatarShadow = null;
 
 function playAvatarAnimationByName(name) {
 
@@ -94,6 +95,21 @@ loader.load(
     avatar.scale.set(0.5, 0.5, 0.5);
     avatar.position.set(-1.5, 0, 3);
     scene.add(avatar);
+
+    const shadowMaterial = new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      transparent: true,
+      opacity: 0.2,
+      depthWrite: false,
+    });
+
+    avatarShadow = new THREE.Mesh(
+      new THREE.CircleGeometry(0.25, 32),
+      shadowMaterial,
+    );
+    avatarShadow.rotation.x = -Math.PI / 2;
+    avatarShadow.position.set(avatar.position.x, 0.05, avatar.position.z);
+    scene.add(avatarShadow);
     
     avatarMixer = new THREE.AnimationMixer(avatar);
     avatarActions = gltf.animations || []; 
@@ -116,37 +132,22 @@ window.addEventListener("resize", () => {
  }
 );
 
-// Mouse controls (orbit-like movement) 
-let isDragging = false; 
-let previousMousePosition = { x: 0, y: 0 }; 
+// Camera stays fixed in place and only changes its viewing direction.
+function updateCameraLookAt() {
+  if (!avatar) {
+    return;
+  }
 
-canvas.addEventListener("mousedown", (e) => {
-  isDragging = true; 
-  previousMousePosition = { x: e.clientX, y: e.clientY };
- });
- 
-canvas.addEventListener("mousemove", (e) => {
-  if (isDragging) {
-    const deltaX = e.clientX - previousMousePosition.x;
-    const deltaY = e.clientY - previousMousePosition.y; 
-  
-    // Rotate camera around the scene 
-    camera.position.applyAxisAngle(new THREE.Vector3(0, 1, 0), deltaX * 0.01); 
-    camera.lookAt(0, 1, 0); 
-  } 
-  previousMousePosition = { x: e.clientX, y: e.clientY };
-});
+  const lookAtTarget = avatar.position.clone().add(new THREE.Vector3(0, 1.2, 0));
+  camera.lookAt(lookAtTarget);
+}
 
-canvas.addEventListener("mouseup", () => {
-  isDragging = false;
-});
-
-// Zoom with mouse wheel
 canvas.addEventListener("wheel", (e) => {
-  e.preventDefault(); 
-  const zoomSpeed = 0.1; 
+  e.preventDefault();
+
+  const zoomSpeed = 0.3;
   const direction = camera.position.clone().normalize();
-  
+
   if (e.deltaY > 0) {
     camera.position.addScaledVector(direction, zoomSpeed);
   } else {
@@ -185,27 +186,51 @@ function animate() {
     playAvatarAnimationByName("idle");
   }
 
-  if (keys["w"]) {
-    avatar.position.z -= speed; 
-    avatar.rotation.y = Math.PI; 
-  } 
+  const cameraToAvatar = new THREE.Vector3(
+    avatar.position.x - camera.position.x,
+    0,
+    avatar.position.z - camera.position.z,
+  );
 
-  if (keys["s"]) { 
-    avatar.position.z += speed; 
-    avatar.rotation.y = 0;
+  if (cameraToAvatar.lengthSq() > 0) {
+    cameraToAvatar.normalize();
   }
 
-  if (keys["a"]) { 
-    avatar.position.x -= speed; 
-    avatar.rotation.y = Math.PI * 1.5; 
+  const moveDirection = new THREE.Vector3();
+
+  if (keys["w"]) {
+    moveDirection.add(cameraToAvatar);
+  }
+
+  if (keys["s"]) {
+    moveDirection.add(cameraToAvatar.clone().multiplyScalar(-1));
+  }
+
+  if (keys["a"]) {
+    moveDirection.add(
+      new THREE.Vector3(cameraToAvatar.z, 0, -cameraToAvatar.x),
+    );
   }
 
   if (keys["d"]) {
-    avatar.position.x += speed; 
-    avatar.rotation.y = Math.PI * 0.5; 
-  } 
-  
-  renderer.render(scene, camera); 
+    moveDirection.add(
+      new THREE.Vector3(-cameraToAvatar.z, 0, cameraToAvatar.x),
+    );
+  }
+
+  if (moveDirection.lengthSq() > 0) {
+    moveDirection.normalize();
+    avatar.position.x += moveDirection.x * speed;
+    avatar.position.z += moveDirection.z * speed;
+    avatar.rotation.y = Math.atan2(moveDirection.x, moveDirection.z);
+  }
+
+  if (avatarShadow) {
+    avatarShadow.position.set(avatar.position.x, 0.05, avatar.position.z);
+  }
+
+  updateCameraLookAt();
+  renderer.render(scene, camera);
   
 }
 
