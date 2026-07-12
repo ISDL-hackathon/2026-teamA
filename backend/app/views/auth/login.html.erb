@@ -23,9 +23,9 @@
         <% end %>
 
         <% if auth0_ready %>
-          <%= button_to "Auth0 でログイン", "/auth/auth0", method: :post, class: "btn btn-primary btn-wide" %>
+          <%= button_to "ログイン", "/auth/auth0", method: :post, class: "btn btn-primary btn-wide" %>
         <% else %>
-          <button class="btn btn-primary btn-wide" disabled>Auth0 でログイン</button>
+          <button class="btn btn-primary btn-wide" disabled>ログイン</button>
         <% end %>
       </div>
     </div>

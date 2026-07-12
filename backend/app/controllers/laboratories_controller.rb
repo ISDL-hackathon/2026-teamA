@@ -49,5 +49,16 @@ class LaboratoriesController < ApplicationController
       month_seconds: current_user_summary.duration_between(month_start, now)
     }
     @my_access_sessions = current_user_summary.sessions_between(1.month.ago.beginning_of_day, now).reverse
+
+    @calendar_initial_month = Time.zone.today.beginning_of_month
+    @calendar_events = current_user_summary.sessions_between(100.years.ago.beginning_of_day, 100.years.from_now.end_of_day).map do |session|
+      {
+        date: session[:started_at].to_date.iso8601,
+        started_at: session[:started_at].iso8601,
+        ended_at: session[:ended_at].iso8601,
+        open: session[:open],
+        duration_seconds: session[:duration_seconds]
+      }
+    end
   end
 end
