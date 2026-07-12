@@ -12,29 +12,6 @@
   .portal-action[data-open-music] { cursor: pointer; }
   .portal-action[data-open-music]:hover { border-color: rgba(147,197,253,.62); background: rgba(15,23,42,.96); }
   .portal-action span { color: #93c5fd; font-size: 12px; font-weight: 700; text-transform: uppercase; }
-  .music-panel { display: none; top: 50%; left: 50%; width: min(960px, calc(100vw - 48px)); max-height: min(620px, calc(100vh - 48px)); overflow: auto; padding: 28px; border: 1px solid rgba(148,163,184,.35); border-radius: 8px; background: rgba(20,26,32,.94); box-shadow: 0 24px 80px rgba(0,0,0,.42); backdrop-filter: blur(12px); transform: translate(-50%, -50%); pointer-events: auto; }
-  .music-panel.is-open { display: block; }
-  .music-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
-  .music-panel h2 { margin: 0 0 16px; font-size: 24px; }
-  .music-panel-header h2 { margin: 0; }
-  .music-panel h3 { margin: 20px 0 10px; color: #bae6fd; font-size: 15px; }
-  .inline-form { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
-  .inline-form input { min-width: 0; padding: 12px 13px; border: 1px solid rgba(148,163,184,.35); border-radius: 8px; color: #f8fafc; background: #0f141a; }
-  .inline-form button, .track-row button { padding: 10px 14px; border: 1px solid rgba(255,255,255,.18); border-radius: 8px; color: #f8fafc; background: rgba(20,184,166,.86); cursor: pointer; }
-  .list-panel { display: grid; gap: 8px; }
-  .track-row { display: grid; grid-template-columns: 52px 1fr auto auto; align-items: center; gap: 12px; padding: 8px 10px; border: 1px solid transparent; border-radius: 8px; background: transparent; }
-  .track-row:hover { background: rgba(255,255,255,.05); }
-  .track-row img { width: 44px; height: 44px; border-radius: 4px; object-fit: cover; background: #0f141a; }
-  .track-row div { min-width: 0; }
-  .track-row strong, .track-row span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .track-row strong.is-added { color: #1ed760; }
-  .track-row span, .muted { color: #94a3b8; font-size: 13px; }
-  .track-kind { display: inline-block; width: 11px; height: 11px; margin-right: 4px; border: 1px solid currentColor; border-radius: 2px; vertical-align: -1px; }
-  .track-menu { color: #cbd5e1; font-weight: 700; letter-spacing: 3px; }
-  .track-icon-button { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 999px; color: #cbd5e1; background: transparent; font-size: 23px; line-height: 1; }
-  .track-icon-button:hover { color: #f8fafc; background: rgba(255,255,255,.08); }
-  .track-icon-button.is-added { color: #111827; background: #1ed760; font-size: 16px; }
-  @media (max-width: 720px) { .portal-topbar { flex-direction: column; } .music-panel { width: calc(100vw - 24px); padding: 22px; } .inline-form, .track-row { grid-template-columns: 1fr; } .track-row img { display: none; } .portal-status { text-align: left; } }
 </style>
 
 <div class="portal-shell">
@@ -115,7 +92,43 @@
         <% end %>
       </div>
     </section>
-  </section>
+    </div>
+  </dialog>
+
+  <dialog class="portal-modal modal" id="card-panel">
+    <div class="modal-box portal-glass">
+    <form method="dialog">
+      <button class="modal-close btn btn-sm btn-circle btn-ghost" aria-label="閉じる">x</button>
+    </form>
+    <h2 class="portal-panel-title">カード登録</h2>
+    <div class="inline-form">
+      <input id="card-idm-input" class="input input-bordered" type="text" placeholder="0123456789ABCDEF" autocomplete="off">
+      <button id="card-register-button" class="btn btn-primary" type="button">登録</button>
+    </div>
+    <p class="muted">登録後、ローカル FeliCa クライアントの打刻 API で入退室が記録されます。</p>
+    </div>
+  </dialog>
+
+  <dialog class="portal-modal modal" id="dashboard-panel">
+    <div class="modal-box portal-glass">
+    <form method="dialog">
+      <button class="modal-close btn btn-sm btn-circle btn-ghost" aria-label="閉じる">x</button>
+    </form>
+    <h2 class="portal-panel-title">滞在ログ</h2>
+    <div class="list-panel" id="access-log-list"></div>
+    </div>
+  </dialog>
+
+  <dialog class="portal-modal modal" id="queue-panel">
+    <div class="modal-box portal-glass">
+    <form method="dialog">
+      <button class="modal-close btn btn-sm btn-circle btn-ghost" aria-label="閉じる">x</button>
+    </form>
+    <h2 class="portal-panel-title">選曲実行</h2>
+    <button id="queue-play-button" type="button" class="wide-button btn btn-primary">ルーレットで曲を選ぶ</button>
+    <pre id="queue-result" class="result-box"></pre>
+    </div>
+  </dialog>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -124,19 +137,14 @@
 <script src="/3d_room.js"></script>
 <script>
   const apiBase = "/api/v1";
-  const musicPanel = document.getElementById("music-panel");
-  const musicSearchInput = document.getElementById("music-search-input");
-  const favoriteTrackIds = new Set(
-    Array.from(document.querySelectorAll("[data-favorite-track-id]")).map((element) => element.dataset.favoriteTrackId)
-  );
 
-  document.querySelector("[data-open-music]").addEventListener("click", () => {
-    musicPanel.classList.add("is-open");
-    musicSearchInput.focus();
-  });
-  document.querySelector("[data-close-music]").addEventListener("click", () => {
-    musicPanel.classList.remove("is-open");
-    setStatus("<%= j current_user.name %>");
+  document.querySelectorAll("[data-panel]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const panel = document.getElementById(button.dataset.panel);
+      panel.showModal();
+      if (button.dataset.panel === "music-panel") loadFavoriteTracks();
+      if (button.dataset.panel === "dashboard-panel") loadAccessLogs();
+    });
   });
   document.getElementById("music-search-button").addEventListener("click", searchTracks);
   musicSearchInput.addEventListener("keydown", (event) => {
@@ -163,16 +171,14 @@
       <article class="track-row">
         ${track.image_url ? `<img src="${escapeHtml(track.image_url)}" alt="">` : "<img alt=\"\">"}
         <div>
-          <strong class="${favoriteTrackIds.has(track.spotify_track_id) ? "is-added" : ""}">${escapeHtml(track.track_name)}</strong>
-          <span><span class="track-kind"></span>楽曲・${escapeHtml(track.artist_name || "")}</span>
+          <strong>${escapeHtml(track.track_name)}</strong>
+          <span>${escapeHtml(track.artist_name || "")}</span>
         </div>
-        <span class="track-menu">...</span>
-        ${favoriteTrackIds.has(track.spotify_track_id)
-          ? `<button class="track-icon-button is-added" type="button" disabled aria-label="登録済み">✓</button>`
-          : `<button class="track-icon-button" type="button" data-track="${encodeURIComponent(JSON.stringify(track))}" aria-label="お気に入りに追加">＋</button>`}
+        <button type="button" data-track="${encodeURIComponent(JSON.stringify(track))}">追加</button>
       </article>
     `).join("") || `<p class="muted">該当する曲がありません。</p>`;
 
+    bindPreviewButtons(container);
     container.querySelectorAll("[data-track]").forEach((button) => {
       button.addEventListener("click", () => addTrack(JSON.parse(decodeURIComponent(button.dataset.track))));
     });
@@ -203,22 +209,19 @@
     }
 
     container.innerHTML = data.tracks.map((track) => `
-      <article class="track-row" data-favorite-track-id="${track.spotify_track_id}">
-        ${track.image_url ? `<img src="${escapeHtml(track.image_url)}" alt="">` : "<img alt=\"\">"}
+      <article class="track-row">
         <div>
-          <strong class="is-added">${escapeHtml(track.track_name)}</strong>
-          <span><span class="track-kind"></span>楽曲・${escapeHtml(track.artist_name)}</span>
+          <strong>${escapeHtml(track.track_name)}</strong>
+          <span>${escapeHtml(track.artist_name)}</span>
         </div>
-        <span class="track-menu">...</span>
-        <button class="track-icon-button is-added" type="button" data-remove-track="${track.id}" data-remove-spotify-track-id="${track.spotify_track_id}" aria-label="お気に入りから削除">✓</button>
+        <button type="button" data-remove-track="${track.id}">削除</button>
       </article>
     `).join("") || `<p class="muted">登録済みの曲はありません。</p>`;
 
     bindFavoriteRemoveButtons();
   }
 
-  function bindFavoriteRemoveButtons() {
-    document.querySelectorAll("[data-remove-track]").forEach((button) => {
+    container.querySelectorAll("[data-remove-track]").forEach((button) => {
       button.addEventListener("click", async () => {
         await fetch(`${apiBase}/spotify/tracks/${button.dataset.removeTrack}`, { method: "DELETE" });
         if (button.dataset.removeSpotifyTrackId) favoriteTrackIds.delete(button.dataset.removeSpotifyTrackId);
@@ -227,6 +230,64 @@
       });
     });
   }
+
+  function previewButtonHtml(track) {
+    const previewUrl = track.preview_url || "";
+    const spotifyUrl = track.external_urls?.spotify || `https://open.spotify.com/track/${track.spotify_track_id}`;
+    if (previewUrl) {
+      return `<button class="track-button" type="button" data-preview-url="${escapeHtml(previewUrl)}" aria-label="プレビュー再生">▶</button>`;
+    }
+
+    return `<button class="track-button" type="button" data-spotify-url="${escapeHtml(spotifyUrl)}" aria-label="Spotifyで開く">↗</button>`;
+  }
+
+  function bindPreviewButtons(scope = document) {
+    scope.querySelectorAll("[data-preview-url]").forEach((button) => {
+      button.addEventListener("click", () => togglePreview(button));
+    });
+
+    scope.querySelectorAll("[data-spotify-url]").forEach((button) => {
+      button.addEventListener("click", () => {
+        window.open(button.dataset.spotifyUrl, "_blank", "noopener");
+      });
+    });
+  }
+
+  function togglePreview(button) {
+    const previewUrl = button.dataset.previewUrl;
+
+    if (playingPreviewUrl === previewUrl && !previewPlayer.paused) {
+      previewPlayer.pause();
+      button.textContent = "▶";
+      activePreviewButton = null;
+      setStatus("再生を停止しました");
+      return;
+    }
+
+    document.querySelectorAll("[data-preview-url]").forEach((item) => {
+      item.textContent = "▶";
+    });
+    playingPreviewUrl = previewUrl;
+    activePreviewButton = button;
+    previewPlayer.src = previewUrl;
+    previewPlayer.play()
+      .then(() => {
+        button.textContent = "⏸";
+        setStatus("プレビュー再生中");
+      })
+      .catch(() => {
+        button.textContent = "▶";
+        activePreviewButton = null;
+        setStatus("ブラウザで再生できませんでした");
+      });
+  }
+
+  previewPlayer.addEventListener("ended", () => {
+    if (activePreviewButton) activePreviewButton.textContent = "▶";
+    activePreviewButton = null;
+    playingPreviewUrl = null;
+    setStatus("プレビュー再生が終了しました");
+  });
 
   function refreshSearchResultButtons() {
     document.querySelectorAll("[data-track]").forEach((button) => {
