@@ -235,9 +235,6 @@
       </article>
     `).join("") || `<p class="muted">登録済みの曲はありません。</p>`;
 
-    bindFavoriteRemoveButtons();
-  }
-
     bindPreviewButtons(container);
     container.querySelectorAll("[data-remove-track]").forEach((button) => {
       button.addEventListener("click", async () => {
@@ -307,6 +304,7 @@
     setStatus("プレビュー再生が終了しました");
   });
 
+<<<<<<< Updated upstream
   function previewButtonHtml(track) {
     const previewUrl = track.preview_url || "";
     const spotifyUrl = track.external_urls?.spotify || `https://open.spotify.com/track/${track.spotify_track_id}`;
@@ -376,6 +374,8 @@
       button.outerHTML = `<button class="track-icon-button is-added" type="button" disabled aria-label="登録済み">✓</button>`;
     });
 =======
+=======
+>>>>>>> Stashed changes
   async function loadAccessLogs() {
     const response = await fetch(`${apiBase}/access_logs`);
     const data = await response.json();
