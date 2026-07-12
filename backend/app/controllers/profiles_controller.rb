@@ -6,7 +6,7 @@ class ProfilesController < ApplicationController
   end
 
   def update
-    idm = profile_params[:idm].to_s.upcase.delete(" ")
+    idm = FelicaCard.normalize_idm(profile_params[:idm])
 
     ActiveRecord::Base.transaction do
       current_user.update!(name_confirmed: true)

@@ -1,7 +1,7 @@
 <style>
   .portal-shell { position: relative; min-height: 100vh; overflow: hidden; background: #101418; color: #f8fafc; }
   #canvas-3d { position: fixed; inset: 0; z-index: 0; width: 100vw; height: 100vh; }
-  .portal-topbar, .portal-sidebar, .music-panel { position: fixed; z-index: 20; }
+  .portal-topbar, .portal-sidebar, .music-panel, .stay-panel { position: fixed; z-index: 20; }
   .portal-topbar { top: 18px; left: 22px; right: 22px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; pointer-events: none; }
   .portal-topbar .topbar-actions { pointer-events: auto; }
   .portal-kicker { margin: 0; color: #7dd3fc; font-size: 12px; font-weight: 700; text-transform: uppercase; }
@@ -11,19 +11,29 @@
   .portal-action { display: grid; gap: 4px; min-height: 62px; padding: 14px 16px; border: 1px solid rgba(255,255,255,.22); border-radius: 8px; color: #f8fafc; background: rgba(15,23,42,.88); text-align: left; cursor: default; box-shadow: 0 12px 34px rgba(0,0,0,.35); }
   .portal-action[data-open-music] { cursor: pointer; }
   .portal-action[data-open-music]:hover { border-color: rgba(147,197,253,.62); background: rgba(15,23,42,.96); }
+  .portal-action[data-open-stay] { cursor: pointer; }
+  .portal-action[data-open-stay]:hover { border-color: rgba(134,239,172,.62); background: rgba(15,23,42,.96); }
   .portal-action span { color: #93c5fd; font-size: 12px; font-weight: 700; text-transform: uppercase; }
-  .music-panel { display: none; top: 50%; left: 50%; width: min(960px, calc(100vw - 48px)); max-height: min(620px, calc(100vh - 48px)); overflow: auto; padding: 28px; border: 1px solid rgba(148,163,184,.35); border-radius: 8px; background: rgba(20,26,32,.94); box-shadow: 0 24px 80px rgba(0,0,0,.42); backdrop-filter: blur(12px); transform: translate(-50%, -50%); pointer-events: auto; }
-  .music-panel.is-open { display: block; }
-  .music-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
-  .music-panel h2 { margin: 0 0 16px; font-size: 24px; }
-  .music-panel-header h2 { margin: 0; }
-  .music-panel h3 { margin: 20px 0 10px; color: #bae6fd; font-size: 15px; }
+  .music-panel, .stay-panel { display: none; top: 50%; left: 50%; width: min(1040px, calc(100vw - 48px)); max-height: min(720px, calc(100vh - 48px)); overflow: auto; padding: 28px; border: 1px solid rgba(148,163,184,.35); border-radius: 8px; background: rgba(20,26,32,.94); box-shadow: 0 24px 80px rgba(0,0,0,.42); backdrop-filter: blur(12px); transform: translate(-50%, -50%); pointer-events: auto; }
+  .music-panel.is-open, .stay-panel.is-open { display: block; }
+  .music-panel-header, .stay-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+  .music-panel h2, .stay-panel h2 { margin: 0 0 16px; font-size: 24px; }
+  .music-panel-header h2, .stay-panel-header h2 { margin: 0; }
+  .music-panel h3, .stay-panel h3 { margin: 20px 0 10px; color: #bae6fd; font-size: 15px; }
+  .stay-chart-wrap { max-height: 420px; overflow: auto; }
+  .stay-bar-row { display: grid; grid-template-columns: minmax(112px, 160px) minmax(180px, 1fr) auto; gap: 12px; align-items: center; }
+  .stay-bar-track { height: 18px; overflow: hidden; border-radius: 999px; background: rgba(15, 23, 42, .88); box-shadow: inset 0 0 0 1px rgba(148, 163, 184, .22); }
+  .stay-bar-fill { width: 0%; min-width: 0; transition: width .24s ease; background: linear-gradient(90deg, #22d3ee, #a3e635); box-shadow: 0 0 18px rgba(34, 211, 238, .38); }
+  .stay-calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(112px, 1fr)); }
+  .stay-calendar-day { min-height: 112px; }
   .inline-form { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
-  .inline-form input { min-width: 0; padding: 12px 13px; border: 1px solid rgba(148,163,184,.35); border-radius: 8px; color: #f8fafc; background: #0f141a; }
-  .inline-form button, .track-row button { padding: 10px 14px; border: 1px solid rgba(255,255,255,.18); border-radius: 8px; color: #f8fafc; background: rgba(20,184,166,.86); cursor: pointer; }
+  .inline-form input { min-width: 0; padding: 14px 16px; border: 1px solid rgba(148,163,184,.35); border-radius: 8px; color: #f8fafc; background: #0f141a; }
+  .inline-form button, .wide-button, .track-button { border: 1px solid rgba(255,255,255,.18); color: #f8fafc; background: rgba(20,184,166,.86); cursor: pointer; }
+  .inline-form button, .wide-button { padding: 12px 20px; border-radius: 8px; }
+  .music-section-title { margin: 22px 0 10px; color: #bae6fd; font-size: 15px; font-weight: 700; }
   .list-panel { display: grid; gap: 8px; }
-  .track-row { display: grid; grid-template-columns: 52px 1fr auto auto; align-items: center; gap: 12px; padding: 8px 10px; border: 1px solid transparent; border-radius: 8px; background: transparent; }
-  .track-row:hover { background: rgba(255,255,255,.05); }
+  .track-row { display: grid; grid-template-columns: 52px 1fr auto auto; align-items: center; gap: 12px; padding: 10px; border-radius: 8px; background: rgba(255,255,255,.04); }
+  .track-row:hover { background: rgba(255,255,255,.07); }
   .track-row img { width: 44px; height: 44px; border-radius: 4px; object-fit: cover; background: #0f141a; }
   .track-row div { min-width: 0; }
   .track-row strong, .track-row span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -34,7 +44,7 @@
   .track-icon-button { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 999px; color: #cbd5e1; background: transparent; font-size: 23px; line-height: 1; }
   .track-icon-button:hover { color: #f8fafc; background: rgba(255,255,255,.08); }
   .track-icon-button.is-added { color: #111827; background: #1ed760; font-size: 16px; }
-  @media (max-width: 720px) { .portal-topbar { flex-direction: column; } .music-panel { width: calc(100vw - 24px); padding: 22px; } .inline-form, .track-row { grid-template-columns: 1fr; } .track-row img { display: none; } .portal-status { text-align: left; } }
+  @media (max-width: 720px) { .portal-topbar { flex-direction: column; } .music-panel, .stay-panel { width: calc(100vw - 24px); padding: 22px; } .inline-form, .track-row, .stay-bar-row { grid-template-columns: 1fr; } .track-row img { display: none; } .portal-status { text-align: left; } .stay-calendar-scroll { overflow-x: auto; } .stay-calendar-grid { min-width: 784px; } }
 </style>
 
 <div class="portal-shell">
@@ -46,37 +56,39 @@
       <h1>研究室 3D ポータル</h1>
     </div>
     <div class="topbar-actions flex items-center gap-3">
-      <div class="portal-status" id="room-status"><%= current_user.name %></div>
+      <div class="portal-status" id="room-status"><%= current_user&.name || "API 準備中" %></div>
       <%= button_to "Logout", logout_path, method: :delete, class: "btn btn-sm btn-outline" %>
     </div>
   </header>
 
-  <nav class="portal-sidebar" id="portal-sidebar" aria-label="機能メニュー">
-    <button class="portal-action" type="button" data-open-music>
+  <nav class="portal-sidebar" aria-label="機能メニュー">
+    <button class="portal-action btn btn-outline justify-start" type="button" data-panel="music-panel">
       <span>Music</span>
       楽曲検索・登録
     </button>
-    <button class="portal-action" type="button">
+    <button class="portal-action btn btn-outline justify-start" type="button" data-panel="card-panel">
       <span>Card</span>
       カード登録
     </button>
-    <button class="portal-action" type="button">
+    <button class="portal-action" type="button" data-open-stay>
       <span>Stay</span>
       滞在ログ
     </button>
-    <button class="portal-action" type="button">
+    <button class="portal-action btn btn-outline justify-start" type="button" data-panel="queue-panel">
       <span>Queue</span>
       選曲実行
     </button>
   </nav>
 
-  <section class="music-panel" id="music-panel" aria-label="楽曲検索・登録">
+  <dialog class="portal-modal" id="music-panel">
+    <form method="dialog">
+      <button class="modal-close" aria-label="閉じる">x</button>
+    </form>
     <div class="music-panel-header">
-      <h2>楽曲検索・登録</h2>
-      <button class="btn btn-sm btn-outline" type="button" data-close-music>閉じる</button>
+      <h2 class="portal-panel-title">楽曲検索・登録</h2>
     </div>
     <% unless @spotify_env_ready %>
-      <p class="muted">Spotify 検索を使うには .env に SPOTIFY_CLIENT_ID と SPOTIFY_CLIENT_SECRET を設定してください。</p>
+      <p class="muted">Spotify 検索を使うには .env に SPOTIFY_CLIENT_ID と SPOTIFY_CLIENT_SECRET を設定して、Rails を再起動してください。</p>
     <% end %>
 
     <div class="inline-form">
@@ -85,14 +97,14 @@
     </div>
 
     <section>
-      <h3>検索結果</h3>
+      <h3 class="music-section-title">検索結果</h3>
       <div class="list-panel" id="music-search-results">
         <p class="muted">Spotify から曲を検索できます。</p>
       </div>
     </section>
 
     <section>
-      <h3>お気に入り</h3>
+      <h3 class="music-section-title">お気に入り</h3>
       <div class="list-panel" id="favorite-tracks">
         <% if @favorite_tracks.any? %>
           <% @favorite_tracks.each do |track| %>
@@ -106,14 +118,120 @@
                 <strong class="is-added"><%= track.track_name %></strong>
                 <span><span class="track-kind"></span>楽曲・<%= track.artist_name %></span>
               </div>
-              <span class="track-menu">...</span>
-              <button class="track-icon-button is-added" type="button" data-remove-track="<%= track.id %>" aria-label="お気に入りから削除">✓</button>
+              <%= tag.button "▶", class: "track-button", type: "button", data: { preview_url: track.preview_url }, aria: { label: "プレビュー再生" } if track.preview_url.present? %>
+              <%= tag.button "↗", class: "track-button", type: "button", data: { spotify_url: "https://open.spotify.com/track/#{track.spotify_track_id}" }, aria: { label: "Spotifyで開く" } if track.preview_url.blank? %>
+              <button class="track-button is-added" type="button" data-remove-track="<%= track.id %>" data-remove-spotify-track-id="<%= track.spotify_track_id %>" aria-label="お気に入りから削除">✓</button>
             </article>
           <% end %>
         <% else %>
           <p class="muted">登録済みの曲はありません。</p>
         <% end %>
       </div>
+    </section>
+  </section>
+
+  <section class="stay-panel" id="stay-panel" aria-label="入退室ダッシュボード">
+    <div class="stay-panel-header">
+      <h2>研究室滞在時間ダッシュボード</h2>
+      <button class="btn btn-sm btn-outline" type="button" data-close-stay>閉じる</button>
+    </div>
+
+    <div class="grid gap-3 md:grid-cols-3">
+      <div class="rounded-lg border border-white/40 bg-base-100/85 p-4 shadow">
+        <div class="text-sm text-base-content/70">今日の滞在時間</div>
+        <div class="mt-2 text-2xl font-bold"><%= format_stay_duration(@my_access_summary[:today_seconds]) %></div>
+      </div>
+      <div class="rounded-lg border border-white/40 bg-base-100/85 p-4 shadow">
+        <div class="text-sm text-base-content/70">今週の合計</div>
+        <div class="mt-2 text-2xl font-bold"><%= format_stay_duration(@my_access_summary[:week_seconds]) %></div>
+      </div>
+      <div class="rounded-lg border border-white/40 bg-base-100/85 p-4 shadow">
+        <div class="text-sm text-base-content/70">今月の合計</div>
+        <div class="mt-2 text-2xl font-bold"><%= format_stay_duration(@my_access_summary[:month_seconds]) %></div>
+      </div>
+    </div>
+
+    <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
+      <h3 class="m-0">表示切り替え</h3>
+      <div class="join">
+        <button class="btn btn-sm btn-primary join-item" type="button" data-stay-view="chart">グラフ</button>
+        <button class="btn btn-sm join-item" type="button" data-stay-view="calendar">カレンダー</button>
+      </div>
+    </div>
+
+    <section data-stay-section="chart">
+      <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <h3>メンバー比較</h3>
+        <div class="join">
+          <button class="btn btn-sm join-item" type="button" data-stay-sort="today">今日</button>
+          <button class="btn btn-sm btn-primary join-item" type="button" data-stay-sort="week">今週</button>
+          <button class="btn btn-sm join-item" type="button" data-stay-sort="month">今月</button>
+          <button class="btn btn-sm join-item" type="button" data-stay-sort="in_room">入室中</button>
+        </div>
+      </div>
+      <div class="stay-chart-wrap grid gap-2 rounded-lg border border-white/30 bg-base-100/90 p-4" data-stay-chart>
+        <% @room_access_rows.each do |row| %>
+          <div
+            class="rounded-lg border border-base-300 bg-base-200/70 p-3"
+            data-stay-row
+            data-in-room="<%= row[:in_room] ? 'true' : 'false' %>"
+            data-today-seconds="<%= row[:today_seconds] %>"
+            data-week-seconds="<%= row[:week_seconds] %>"
+            data-month-seconds="<%= row[:month_seconds] %>"
+            data-current-seconds="<%= row[:current_duration_seconds] %>"
+            data-today-label="<%= format_stay_duration(row[:today_seconds]) %>"
+            data-week-label="<%= format_stay_duration(row[:week_seconds]) %>"
+            data-month-label="<%= format_stay_duration(row[:month_seconds]) %>"
+            data-current-label="<%= format_stay_duration(row[:current_duration_seconds]) %>"
+            data-current-since="<%= row[:current_since] ? row[:current_since].strftime('%m/%d %H:%M') : '-' %>"
+            data-user-name="<%= row[:user].name %>"
+          >
+            <div class="stay-bar-row">
+              <div class="min-w-0">
+                <div class="truncate font-semibold"><%= row[:user].name %></div>
+                <div class="text-xs text-base-content/70" data-stay-subtitle>
+                  今週 <%= format_stay_duration(row[:week_seconds]) %>
+                </div>
+              </div>
+              <div class="stay-bar-track">
+                <div class="stay-bar-fill h-full rounded-full" data-stay-bar></div>
+              </div>
+              <div class="flex min-w-28 items-center justify-end gap-2">
+                <span class="badge badge-info badge-sm font-semibold text-info-content" data-stay-value><%= format_stay_duration(row[:week_seconds]) %></span>
+                <% if row[:in_room] %>
+                  <span class="badge badge-success badge-sm">入室中</span>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </section>
+
+    <section class="mt-6 hidden" data-stay-section="calendar">
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <h3 class="m-0">自分の滞在カレンダー</h3>
+        <div class="join">
+          <button class="btn btn-sm join-item" type="button" data-calendar-prev>前月</button>
+          <span class="btn btn-sm join-item pointer-events-none" data-calendar-label><%= @calendar_initial_month.year %>年<%= @calendar_initial_month.month %>月</span>
+          <button class="btn btn-sm join-item" type="button" data-calendar-next>次月</button>
+        </div>
+      </div>
+
+      <div class="stay-calendar-scroll rounded-lg border border-base-300 bg-base-100/90">
+        <div class="stay-calendar-grid border-b border-base-300 bg-base-200/80 text-center text-sm font-semibold text-base-content/70">
+          <% %w[日 月 火 水 木 金 土].each do |day_name| %>
+            <div class="border-r border-base-300 p-2 last:border-r-0"><%= day_name %></div>
+          <% end %>
+        </div>
+        <div
+          class="stay-calendar-grid"
+          data-calendar-grid
+          data-initial-year="<%= @calendar_initial_month.year %>"
+          data-initial-month="<%= @calendar_initial_month.month %>"
+        ></div>
+      </div>
+      <script type="application/json" id="calendar-events-json"><%= raw json_escape(@calendar_events.to_json) %></script>
     </section>
   </section>
 </div>
@@ -125,12 +243,35 @@
 <script>
   const apiBase = "/api/v1";
   const musicPanel = document.getElementById("music-panel");
+  const stayPanel = document.getElementById("stay-panel");
   const musicSearchInput = document.getElementById("music-search-input");
+  const stayRows = Array.from(document.querySelectorAll("[data-stay-row]"));
+  const staySortButtons = Array.from(document.querySelectorAll("[data-stay-sort]"));
+  const stayViewButtons = Array.from(document.querySelectorAll("[data-stay-view]"));
+  const staySections = Array.from(document.querySelectorAll("[data-stay-section]"));
+  const calendarGrid = document.querySelector("[data-calendar-grid]");
+  const calendarLabel = document.querySelector("[data-calendar-label]");
+  const calendarPrev = document.querySelector("[data-calendar-prev]");
+  const calendarNext = document.querySelector("[data-calendar-next]");
+  const calendarEvents = JSON.parse(document.getElementById("calendar-events-json")?.textContent || "[]");
+  const calendarEventsByDate = calendarEvents.reduce((result, event) => {
+    result[event.date] ||= [];
+    result[event.date].push(event);
+    return result;
+  }, {});
+  let activeCalendarMonth = new Date(
+    Number(calendarGrid?.dataset.initialYear || new Date().getFullYear()),
+    Number(calendarGrid?.dataset.initialMonth || new Date().getMonth() + 1) - 1,
+    1
+  );
   const favoriteTrackIds = new Set(
     Array.from(document.querySelectorAll("[data-favorite-track-id]")).map((element) => element.dataset.favoriteTrackId)
   );
+  let playingPreviewUrl = null;
+  let activePreviewButton = null;
 
   document.querySelector("[data-open-music]").addEventListener("click", () => {
+    stayPanel.classList.remove("is-open");
     musicPanel.classList.add("is-open");
     musicSearchInput.focus();
   });
@@ -138,11 +279,57 @@
     musicPanel.classList.remove("is-open");
     setStatus("<%= j current_user.name %>");
   });
+  document.querySelector("[data-open-stay]").addEventListener("click", () => {
+    musicPanel.classList.remove("is-open");
+    stayPanel.classList.add("is-open");
+    
+  });
+  document.querySelector("[data-close-stay]").addEventListener("click", () => {
+    stayPanel.classList.remove("is-open");
+    setStatus("<%= j current_user.name %>");
+  });
+  staySortButtons.forEach((button) => {
+    button.addEventListener("click", () => sortStayRows(button.dataset.staySort));
+  });
+  stayViewButtons.forEach((button) => {
+    button.addEventListener("click", () => switchStayView(button.dataset.stayView));
+  });
+  calendarPrev?.addEventListener("click", () => {
+    activeCalendarMonth = new Date(activeCalendarMonth.getFullYear(), activeCalendarMonth.getMonth() - 1, 1);
+    renderCalendarMonth();
+  });
+  calendarNext?.addEventListener("click", () => {
+    activeCalendarMonth = new Date(activeCalendarMonth.getFullYear(), activeCalendarMonth.getMonth() + 1, 1);
+    renderCalendarMonth();
+  });
+  sortStayRows("week");
+  switchStayView("chart");
+  renderCalendarMonth();
   document.getElementById("music-search-button").addEventListener("click", searchTracks);
-  musicSearchInput.addEventListener("keydown", (event) => {
+  document.getElementById("music-search-input").addEventListener("keydown", (event) => {
     if (event.key === "Enter") searchTracks();
   });
   bindFavoriteRemoveButtons();
+  bindPreviewButtons();
+
+  document.getElementById("card-register-button").addEventListener("click", async () => {
+    const idm = document.getElementById("card-idm-input").value.trim();
+    if (!idm) return setStatus("IDm を入力してください");
+
+    const response = await fetch(`${apiBase}/cards`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idm }),
+    });
+    const data = await response.json();
+    setStatus(data.status === "success" ? "カードを登録しました" : data.message);
+  });
+
+  document.getElementById("queue-play-button").addEventListener("click", async () => {
+    const response = await fetch(`${apiBase}/alexa/play_queue`, { method: "POST" });
+    const data = await response.json();
+    document.getElementById("queue-result").textContent = JSON.stringify(data, null, 2);
+  });
 
   async function searchTracks() {
     const query = document.getElementById("music-search-input").value.trim();
@@ -166,13 +353,14 @@
           <strong class="${favoriteTrackIds.has(track.spotify_track_id) ? "is-added" : ""}">${escapeHtml(track.track_name)}</strong>
           <span><span class="track-kind"></span>楽曲・${escapeHtml(track.artist_name || "")}</span>
         </div>
-        <span class="track-menu">...</span>
+        ${previewButtonHtml(track)}
         ${favoriteTrackIds.has(track.spotify_track_id)
-          ? `<button class="track-icon-button is-added" type="button" disabled aria-label="登録済み">✓</button>`
-          : `<button class="track-icon-button" type="button" data-track="${encodeURIComponent(JSON.stringify(track))}" aria-label="お気に入りに追加">＋</button>`}
+          ? `<button class="track-button is-added" type="button" disabled aria-label="登録済み">✓</button>`
+          : `<button class="track-button" type="button" data-track="${encodeURIComponent(JSON.stringify(track))}" aria-label="お気に入りに追加">＋</button>`}
       </article>
     `).join("") || `<p class="muted">該当する曲がありません。</p>`;
 
+    bindPreviewButtons(container);
     container.querySelectorAll("[data-track]").forEach((button) => {
       button.addEventListener("click", () => addTrack(JSON.parse(decodeURIComponent(button.dataset.track))));
     });
@@ -209,16 +397,17 @@
           <strong class="is-added">${escapeHtml(track.track_name)}</strong>
           <span><span class="track-kind"></span>楽曲・${escapeHtml(track.artist_name)}</span>
         </div>
-        <span class="track-menu">...</span>
-        <button class="track-icon-button is-added" type="button" data-remove-track="${track.id}" data-remove-spotify-track-id="${track.spotify_track_id}" aria-label="お気に入りから削除">✓</button>
+        ${previewButtonHtml(track)}
+        <button class="track-button is-added" type="button" data-remove-track="${track.id}" data-remove-spotify-track-id="${track.spotify_track_id}" aria-label="お気に入りから削除">✓</button>
       </article>
     `).join("") || `<p class="muted">登録済みの曲はありません。</p>`;
 
-    bindFavoriteRemoveButtons();
+    bindPreviewButtons(container);
+    bindFavoriteRemoveButtons(container);
   }
 
-  function bindFavoriteRemoveButtons() {
-    document.querySelectorAll("[data-remove-track]").forEach((button) => {
+  function bindFavoriteRemoveButtons(scope = document) {
+    scope.querySelectorAll("[data-remove-track]").forEach((button) => {
       button.addEventListener("click", async () => {
         await fetch(`${apiBase}/spotify/tracks/${button.dataset.removeTrack}`, { method: "DELETE" });
         if (button.dataset.removeSpotifyTrackId) favoriteTrackIds.delete(button.dataset.removeSpotifyTrackId);
@@ -228,6 +417,64 @@
     });
   }
 
+  function previewButtonHtml(track) {
+    const previewUrl = track.preview_url || "";
+    const spotifyUrl = track.external_urls?.spotify || `https://open.spotify.com/track/${track.spotify_track_id}`;
+    if (previewUrl) {
+      return `<button class="track-button" type="button" data-preview-url="${escapeHtml(previewUrl)}" aria-label="プレビュー再生">▶</button>`;
+    }
+
+    return `<button class="track-button" type="button" data-spotify-url="${escapeHtml(spotifyUrl)}" aria-label="Spotifyで開く">↗</button>`;
+  }
+
+  function bindPreviewButtons(scope = document) {
+    scope.querySelectorAll("[data-preview-url]").forEach((button) => {
+      button.addEventListener("click", () => togglePreview(button));
+    });
+
+    scope.querySelectorAll("[data-spotify-url]").forEach((button) => {
+      button.addEventListener("click", () => {
+        window.open(button.dataset.spotifyUrl, "_blank", "noopener");
+      });
+    });
+  }
+
+  function togglePreview(button) {
+    const previewUrl = button.dataset.previewUrl;
+
+    if (playingPreviewUrl === previewUrl && !previewPlayer.paused) {
+      previewPlayer.pause();
+      button.textContent = "▶";
+      activePreviewButton = null;
+      setStatus("再生を停止しました");
+      return;
+    }
+
+    document.querySelectorAll("[data-preview-url]").forEach((item) => {
+      item.textContent = "▶";
+    });
+    playingPreviewUrl = previewUrl;
+    activePreviewButton = button;
+    previewPlayer.src = previewUrl;
+    previewPlayer.play()
+      .then(() => {
+        button.textContent = "⏸";
+        setStatus("プレビュー再生中");
+      })
+      .catch(() => {
+        button.textContent = "▶";
+        activePreviewButton = null;
+        setStatus("ブラウザで再生できませんでした");
+      });
+  }
+
+  previewPlayer.addEventListener("ended", () => {
+    if (activePreviewButton) activePreviewButton.textContent = "▶";
+    activePreviewButton = null;
+    playingPreviewUrl = null;
+    setStatus("プレビュー再生が終了しました");
+  });
+
   function refreshSearchResultButtons() {
     document.querySelectorAll("[data-track]").forEach((button) => {
       const track = JSON.parse(decodeURIComponent(button.dataset.track));
@@ -235,12 +482,148 @@
 
       const row = button.closest(".track-row");
       row.querySelector("strong").classList.add("is-added");
-      button.outerHTML = `<button class="track-icon-button is-added" type="button" disabled aria-label="登録済み">✓</button>`;
+      button.outerHTML = `<button class="track-button is-added" type="button" disabled aria-label="登録済み">✓</button>`;
     });
+  }
+
+  async function loadAccessLogs() {
+    const response = await fetch(`${apiBase}/access_logs`);
+    const data = await response.json();
+    const container = document.getElementById("access-log-list");
+    container.innerHTML = data.logs.map((log) => `
+      <article class="track-row">
+        <div>
+          <strong>${log.action_type === "in" ? "入室" : "退室"}</strong>
+          <span>${new Date(log.timestamp).toLocaleString()}</span>
+        </div>
+      </article>
+    `).join("") || `<p class="muted">滞在ログはまだありません。</p>`;
   }
 
   function setStatus(message) {
     document.getElementById("room-status").textContent = message;
+  }
+
+  function switchStayView(view) {
+    stayViewButtons.forEach((button) => {
+      const isActive = button.dataset.stayView === view;
+      button.classList.toggle("btn-primary", isActive);
+      button.classList.toggle("btn-ghost", !isActive);
+    });
+
+    staySections.forEach((section) => {
+      section.classList.toggle("hidden", section.dataset.staySection !== view);
+    });
+  }
+
+  function renderCalendarMonth() {
+    if (!calendarGrid) return;
+
+    const year = activeCalendarMonth.getFullYear();
+    const month = activeCalendarMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDay = new Date(firstDay);
+    startDay.setDate(firstDay.getDate() - firstDay.getDay());
+    const endDay = new Date(lastDay);
+    endDay.setDate(lastDay.getDate() + (6 - lastDay.getDay()));
+
+    if (calendarLabel) calendarLabel.textContent = `${year}年${month + 1}月`;
+
+    const todayKey = dateKey(new Date());
+    const cells = [];
+    for (let day = new Date(startDay); day <= endDay; day.setDate(day.getDate() + 1)) {
+      const key = dateKey(day);
+      const events = calendarEventsByDate[key] || [];
+      const inMonth = day.getMonth() === month;
+      const dayClass = inMonth ? "bg-base-100" : "bg-base-200/50 text-base-content/40";
+      const dateLabelClass = key === todayKey ? "badge badge-primary badge-sm" : "text-sm font-semibold";
+      const eventCount = events.length > 0 ? `<span class="badge badge-outline badge-xs">${events.length}件</span>` : "";
+      const eventHtml = events.map((event) => `
+        <div class="rounded-md bg-info px-2 py-1 text-xs font-semibold text-white">
+          <div class="truncate">${formatCalendarTime(event.started_at)} - ${event.open ? "滞在中" : formatCalendarTime(event.ended_at)}</div>
+          <div class="text-white/80">${formatDuration(event.duration_seconds)}</div>
+        </div>
+      `).join("");
+
+      cells.push(`
+        <div class="stay-calendar-day border-b border-r border-base-300 p-2 ${dayClass}">
+          <div class="mb-2 flex items-center justify-between gap-2">
+            <span class="${dateLabelClass}">${day.getDate()}</span>
+            ${eventCount}
+          </div>
+          <div class="grid gap-1">${eventHtml}</div>
+        </div>
+      `);
+    }
+
+    calendarGrid.innerHTML = cells.join("");
+  }
+
+  function dateKey(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  function formatCalendarTime(value) {
+    const date = new Date(value);
+    return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+  }
+
+  function formatDuration(seconds) {
+    const totalMinutes = Math.max(Math.floor(Number(seconds || 0) / 60), 0);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours === 0) return `${minutes}分`;
+
+    return `${hours}時間${String(minutes).padStart(2, "0")}分`;
+  }
+
+  function sortStayRows(mode) {
+    const chart = document.querySelector("[data-stay-chart]");
+    if (!chart) return;
+
+    staySortButtons.forEach((button) => {
+      const isActive = button.dataset.staySort === mode;
+      button.classList.toggle("btn-primary", isActive);
+      button.classList.toggle("btn-ghost", !isActive);
+    });
+
+    const secondsKey = mode === "in_room" ? "currentSeconds" : `${mode}Seconds`;
+    const sortedRows = [...stayRows].sort((a, b) => {
+      if (mode === "in_room") {
+        const roomCompare = Number(b.dataset.inRoom === "true") - Number(a.dataset.inRoom === "true");
+        if (roomCompare !== 0) return roomCompare;
+        return Number(b.dataset.currentSeconds) - Number(a.dataset.currentSeconds) || a.dataset.userName.localeCompare(b.dataset.userName, "ja");
+      }
+
+      return Number(b.dataset[secondsKey]) - Number(a.dataset[secondsKey]) || a.dataset.userName.localeCompare(b.dataset.userName, "ja");
+    });
+    const visibleRows = sortedRows.filter((row) => mode !== "in_room" || row.dataset.inRoom === "true");
+    const maxSeconds = Math.max(...visibleRows.map((row) => Number(row.dataset[secondsKey])), 0);
+
+    sortedRows.forEach((row) => {
+      row.hidden = mode === "in_room" && row.dataset.inRoom !== "true";
+      const seconds = Number(row.dataset[secondsKey]);
+      const bar = row.querySelector("[data-stay-bar]");
+      const value = row.querySelector("[data-stay-value]");
+      const subtitle = row.querySelector("[data-stay-subtitle]");
+      const width = maxSeconds > 0 ? Math.max((seconds / maxSeconds) * 100, seconds > 0 ? 4 : 0) : 0;
+
+      if (bar) bar.style.width = `${width}%`;
+      if (value) value.textContent = row.dataset[`${mode === "in_room" ? "current" : mode}Label`];
+      if (subtitle) subtitle.textContent = staySubtitle(row, mode);
+      chart.appendChild(row);
+    });
+  }
+
+  function staySubtitle(row, mode) {
+    if (mode === "today") return `今日 ${row.dataset.todayLabel}`;
+    if (mode === "month") return `今月 ${row.dataset.monthLabel}`;
+    if (mode === "in_room") return `入室開始 ${row.dataset.currentSince}`;
+    return `今週 ${row.dataset.weekLabel}`;
   }
 
   function escapeHtml(value) {
@@ -248,4 +631,6 @@
     div.textContent = value || "";
     return div.innerHTML;
   }
+
+  setStatus("API 接続待機中");
 </script>

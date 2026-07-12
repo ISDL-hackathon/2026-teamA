@@ -1,10 +1,12 @@
 module Api
   module V1
     class ScansController < BaseController
-      before_action :authenticate_api_key!
+      before_action :enticate_api_key!
 
       def create
-        idm = params[:idm].to_s.upcase
+        idm = FelicaCard.normalize_idm(params[:idm])
+        return render_error("IDm is required", "IDM_REQUIRED", :bad_request) if idm.blank?
+
         card = FelicaCard.find_by(idm: idm)
         return render_error("User not found for this card", "CARD_NOT_FOUND", :not_found) unless card
 
