@@ -4,6 +4,7 @@
 !.gitignore
 node_modules
 backend/node_modules/
+*.mmd
 
 # バックエンド（Rails）
 backend/.bundle/
