@@ -12,6 +12,15 @@
   .portal-action[data-open-music] { cursor: pointer; }
   .portal-action[data-open-music]:hover { border-color: rgba(147,197,253,.62); background: rgba(15,23,42,.96); }
   .portal-action span { color: #93c5fd; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+  .track-row { display: grid; grid-template-columns: 52px 1fr auto auto; align-items: center; gap: 12px; padding: 10px; border-radius: 8px; background: rgba(255,255,255,.04); }
+  .track-row + .track-row { margin-top: 8px; }
+  .track-row img { width: 44px; height: 44px; border-radius: 4px; object-fit: cover; background: #0f141a; }
+  .track-row div { min-width: 0; }
+  .track-row strong, .track-row span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .track-row span, .muted { color: #94a3b8; font-size: 13px; }
+  .track-button { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 1px solid rgba(255,255,255,.22); border-radius: 999px; color: #f8fafc; background: transparent; cursor: pointer; }
+  .track-button:hover { background: rgba(255,255,255,.1); }
+  .track-button.is-added { color: #111827; background: #1ed760; border-color: #1ed760; }
 </style>
 
 <div class="portal-shell">
@@ -95,6 +104,8 @@
     </div>
   </dialog>
 
+  <audio id="spotify-preview-player"></audio>
+
   <dialog class="portal-modal modal" id="card-panel">
     <div class="modal-box portal-glass">
     <form method="dialog">
@@ -137,6 +148,9 @@
 <script src="/3d_room.js"></script>
 <script>
   const apiBase = "/api/v1";
+  const previewPlayer = document.getElementById("spotify-preview-player");
+  let playingPreviewUrl = null;
+  let activePreviewButton = null;
 
   document.querySelectorAll("[data-panel]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -172,9 +186,10 @@
         ${track.image_url ? `<img src="${escapeHtml(track.image_url)}" alt="">` : "<img alt=\"\">"}
         <div>
           <strong>${escapeHtml(track.track_name)}</strong>
-          <span>${escapeHtml(track.artist_name || "")}</span>
+          <span>楽曲・${escapeHtml(track.artist_name || "")}</span>
         </div>
-        <button type="button" data-track="${encodeURIComponent(JSON.stringify(track))}">追加</button>
+        ${previewButtonHtml(track)}
+        <button class="track-button" type="button" data-track="${encodeURIComponent(JSON.stringify(track))}" aria-label="お気に入りに追加">＋</button>
       </article>
     `).join("") || `<p class="muted">該当する曲がありません。</p>`;
 
@@ -210,17 +225,20 @@
 
     container.innerHTML = data.tracks.map((track) => `
       <article class="track-row">
+        ${track.image_url ? `<img src="${escapeHtml(track.image_url)}" alt="">` : "<img alt=\"\">"}
         <div>
           <strong>${escapeHtml(track.track_name)}</strong>
-          <span>${escapeHtml(track.artist_name)}</span>
+          <span>楽曲・${escapeHtml(track.artist_name)}</span>
         </div>
-        <button type="button" data-remove-track="${track.id}">削除</button>
+        ${previewButtonHtml(track)}
+        <button class="track-button is-added" type="button" data-remove-track="${track.id}" aria-label="お気に入りから削除">✓</button>
       </article>
     `).join("") || `<p class="muted">登録済みの曲はありません。</p>`;
 
     bindFavoriteRemoveButtons();
   }
 
+    bindPreviewButtons(container);
     container.querySelectorAll("[data-remove-track]").forEach((button) => {
       button.addEventListener("click", async () => {
         await fetch(`${apiBase}/spotify/tracks/${button.dataset.removeTrack}`, { method: "DELETE" });
@@ -289,6 +307,65 @@
     setStatus("プレビュー再生が終了しました");
   });
 
+  function previewButtonHtml(track) {
+    const previewUrl = track.preview_url || "";
+    const spotifyUrl = track.external_urls?.spotify || `https://open.spotify.com/track/${track.spotify_track_id}`;
+    if (previewUrl) {
+      return `<button class="track-button" type="button" data-preview-url="${escapeHtml(previewUrl)}" aria-label="プレビュー再生">▶</button>`;
+    }
+
+    return `<button class="track-button" type="button" data-spotify-url="${escapeHtml(spotifyUrl)}" aria-label="Spotifyで開く">↗</button>`;
+  }
+
+  function bindPreviewButtons(scope = document) {
+    scope.querySelectorAll("[data-preview-url]").forEach((button) => {
+      button.addEventListener("click", () => togglePreview(button));
+    });
+
+    scope.querySelectorAll("[data-spotify-url]").forEach((button) => {
+      button.addEventListener("click", () => {
+        window.open(button.dataset.spotifyUrl, "_blank", "noopener");
+      });
+    });
+  }
+
+  function togglePreview(button) {
+    const previewUrl = button.dataset.previewUrl;
+
+    if (playingPreviewUrl === previewUrl && !previewPlayer.paused) {
+      previewPlayer.pause();
+      button.textContent = "▶";
+      activePreviewButton = null;
+      setStatus("再生を停止しました");
+      return;
+    }
+
+    document.querySelectorAll("[data-preview-url]").forEach((item) => {
+      item.textContent = "▶";
+    });
+    playingPreviewUrl = previewUrl;
+    activePreviewButton = button;
+    previewPlayer.src = previewUrl;
+    previewPlayer.play()
+      .then(() => {
+        button.textContent = "⏸";
+        setStatus("プレビュー再生中");
+      })
+      .catch(() => {
+        button.textContent = "▶";
+        activePreviewButton = null;
+        setStatus("ブラウザで再生できませんでした");
+      });
+  }
+
+  previewPlayer.addEventListener("ended", () => {
+    if (activePreviewButton) activePreviewButton.textContent = "▶";
+    activePreviewButton = null;
+    playingPreviewUrl = null;
+    setStatus("プレビュー再生が終了しました");
+  });
+
+<<<<<<< Updated upstream
   function refreshSearchResultButtons() {
     document.querySelectorAll("[data-track]").forEach((button) => {
       const track = JSON.parse(decodeURIComponent(button.dataset.track));
@@ -298,6 +375,20 @@
       row.querySelector("strong").classList.add("is-added");
       button.outerHTML = `<button class="track-icon-button is-added" type="button" disabled aria-label="登録済み">✓</button>`;
     });
+=======
+  async function loadAccessLogs() {
+    const response = await fetch(`${apiBase}/access_logs`);
+    const data = await response.json();
+    const container = document.getElementById("access-log-list");
+    container.innerHTML = data.logs.map((log) => `
+      <article class="track-row">
+        <div>
+          <strong>${log.action_type === "in" ? "入室" : "退室"}</strong>
+          <span>${new Date(log.timestamp).toLocaleString()}</span>
+        </div>
+      </article>
+    `).join("") || `<p class="muted">滞在ログはまだありません</p>`;
+>>>>>>> Stashed changes
   }
 
   function setStatus(message) {
