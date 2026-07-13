@@ -9,7 +9,7 @@ const camera = new THREE.PerspectiveCamera(
   0.1, 
   1000, 
 ); 
-camera.position.set(0, 2.75, 1); 
+camera.position.set(0, 2.7, 1); 
 camera.lookAt(0, 1, 0); 
   
 // Renderer 
@@ -33,7 +33,7 @@ renderer.gammaFactor = 2.2;
 // Load GLB Model 
 const loader = new THREE.GLTFLoader(); 
 loader.load( 
-  "/KC104.glb",
+  "/KC104_cropped.glb",
   (gltf) => {
     const model = gltf.scene;
     model.scale.set(1, 1, 1); 
