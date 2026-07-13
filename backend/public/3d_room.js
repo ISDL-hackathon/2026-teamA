@@ -38,7 +38,7 @@ loader.load(
     const model = gltf.scene;
     model.scale.set(1, 1, 1); 
     model.position.set(0, 0, 0);
-    model.rotation.y = THREE.MathUtils.degToRad(100);
+    model.rotation.y = THREE.MathUtils.degToRad(71);
     model.castShadow = true; model.receiveShadow = true;
     
     // Enable shadows for all meshes 
@@ -121,6 +121,467 @@ loader.load(
   }
 );
 
+// Wall
+const walls = [];
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-4.75, 0, -7.8),
+    new THREE.Vector3(5.4, 4, -7.7)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-4.85, 0, -7.7),
+    new THREE.Vector3(-4.75, 4, 9.75)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-4.75, 0, 9.75),
+    new THREE.Vector3(-3, 4, 9.85)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-3, 0, 6.1),
+    new THREE.Vector3(-2.9, 4, 9.75)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-2.9, 0, 6),
+    new THREE.Vector3(5.4, 4, 6.1)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(5.4, 0, -7.7),
+    new THREE.Vector3(5.5, 4, 6)
+  )
+);
+
+// Objects
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(1.9, 0, -7.7),
+    new THREE.Vector3(5.4, 2, -4.9)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(4.8, 0, -4.9),
+    new THREE.Vector3(5.4, 2, -2.4)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(1.2, 0, -6.4),
+    new THREE.Vector3(1.9, 2, -5.1)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(1.6, 0, -4.3),
+    new THREE.Vector3(4, 2, -3)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(2.1, 0, -4.5),
+    new THREE.Vector3(2.6, 2, -4.3)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(2.1, 0, -3),
+    new THREE.Vector3(2.7, 2, -2.5)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(3.5, 0, -2.4),
+    new THREE.Vector3(4.8, 2, -1.6)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(3.2, 0, -1.7),
+    new THREE.Vector3(3.3, 2, 1.1)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(2.9, 0, -1.9),
+    new THREE.Vector3(3.2, 2, -1.6)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(2.7, 0, 0.2),
+    new THREE.Vector3(3.2, 2, 0.6)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(2.7, 0, 2.2),
+    new THREE.Vector3(3.05, 2, 2.6)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(2.2, 0, 2),
+    new THREE.Vector3(3.15, 2, 2.15)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(4, 0, -1.7),
+    new THREE.Vector3(4.5, 2, 3.9)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(3.05, 0, 2),
+    new THREE.Vector3(3.15, 2, 4.7)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(3.15, 0, 3.9),
+    new THREE.Vector3(4.5, 2, 4.6)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(4.2, 0, 4.6),
+    new THREE.Vector3(4.8, 2, 6)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(1.5, 0, 5.8),
+    new THREE.Vector3(4.2, 2, 6)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(0.8, 0, 5.6),
+    new THREE.Vector3(1.5, 2, 6)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-3.25, 0, 7.15),
+    new THREE.Vector3(-3, 2, 8.8)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-4.75, 0, 7.6),
+    new THREE.Vector3(-4.5, 2, 9.3)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-4.75, 0, 6),
+    new THREE.Vector3(-4.3, 2, 7.6)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-4.75, 0, 3.7),
+    new THREE.Vector3(-3.8, 2, 4.4)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-4.75, 0, -1.85),
+    new THREE.Vector3(-3.9, 2, 3.7)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-3.9, 0, 0.1),
+    new THREE.Vector3(-3.6, 2, 0.3)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-4.75, 0, -2.8),
+    new THREE.Vector3(-3.3, 2, -1.85)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-4.75, 0, -4),
+    new THREE.Vector3(-3.8, 2, -2.8)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-4.75, 0, -5.8),
+    new THREE.Vector3(-4, 2, -4)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-4.75, 0, -7.1),
+    new THREE.Vector3(-3.8, 2, -5.8)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-3.8, 0, -6.6),
+    new THREE.Vector3(-3.5, 2, -6.2)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-4.75, 0, -7.7),
+    new THREE.Vector3(-4.4, 2, -7.1)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-2.05, 0, -7.7),
+    new THREE.Vector3(-0.5, 2, -7.2)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-2.4, 0, -5.7),
+    new THREE.Vector3(-0.7, 2, -3)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-0.7, 0, -5.7),
+    new THREE.Vector3(-0.1, 2, -5)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-2.6, 0, -1.5),
+    new THREE.Vector3(-1.4, 2, -1.1)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-2.9, 0, -1.1),
+    new THREE.Vector3(-1, 2, -0.7)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-2.7, 0, -0.7),
+    new THREE.Vector3(-1.2, 2, -0.3)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-2, 0, -0.3),
+    new THREE.Vector3(-1.1, 2, 0.1)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(1.4, 0, -2.1),
+    new THREE.Vector3(2, 2, -1.7)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(0.8, 0, -1.7),
+    new THREE.Vector3(2.1, 2, -1.3)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(0.6, 0, -1.3),
+    new THREE.Vector3(2.4, 2, -0.9)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(0.5, 0, -0.9),
+    new THREE.Vector3(2.4, 2, -0.5)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(0.7, 0, -0.5),
+    new THREE.Vector3(2.1, 2, -0.1)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(1.2, 0, -0.1),
+    new THREE.Vector3(1.9, 2, 0.3)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-0.5, 0, 0.4),
+    new THREE.Vector3(0.2, 2, 0.8)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-1.2, 0, 0.8),
+    new THREE.Vector3(0.3, 2, 1.2)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-1.1, 0, 1.2),
+    new THREE.Vector3(0.6, 2, 1.6)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-1.2, 0, 1.6),
+    new THREE.Vector3(0.5, 2, 2)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-1.1, 0, 2),
+    new THREE.Vector3(0.2, 2, 2.4)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(0.9, 0, 2.7),
+    new THREE.Vector3(2.1, 2, 3.1)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(0.8, 0, 3.1),
+    new THREE.Vector3(2.5, 2, 3.5)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(0.7, 0, 3.5),
+    new THREE.Vector3(2.7, 2, 3.9)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(0.8, 0, 3.9),
+    new THREE.Vector3(2.4, 2, 4.3)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(1.3, 0, 4.3),
+    new THREE.Vector3(2.1, 2, 4.7)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-2, 0, 3.2),
+    new THREE.Vector3(-1.1, 2, 3.6)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-2.5, 0, 3.6),
+    new THREE.Vector3(-0.7, 2, 4)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-2.4, 0, 4),
+    new THREE.Vector3(-0.8, 2, 4.4)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-2.5, 0, 4.4),
+    new THREE.Vector3(-1, 2, 4.8)
+  )
+);
+
+walls.push(
+  new THREE.Box3(
+    new THREE.Vector3(-1.9, 0, 4.8),
+    new THREE.Vector3(-1.2, 2, 5.1)
+  )
+);
+
+// Wall helpers
+function addWallHelpers(boxes) {
+  boxes.forEach((wall) => {
+    const helper = new THREE.Box3Helper(wall);
+    scene.add(helper);
+  });
+}
+
+addWallHelpers(walls);
 
 // Handle window resize 
 window.addEventListener("resize", () => {
