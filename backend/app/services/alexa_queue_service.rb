@@ -3,7 +3,7 @@ class AlexaQueueService
   RECENT_LIMIT = 3
   DEFAULT_MIN_WEIGHT_SECONDS = 300
 
-  def play_next_track
+  def play_next_track(device_id: nil)
     candidates = candidate_users
     return error("No users have registered tracks", "NO_TRACKS_AVAILABLE") if candidates.empty?
 
@@ -14,7 +14,7 @@ class AlexaQueueService
     track = selected_user.spotify_account.spotify_tracks.sample
     track_uri = "spotify:track:#{track.spotify_track_id}"
 
-    playback = SpotifyPlayerService.new.play_track!(track_uri)
+    playback = SpotifyPlayerService.new.play_track!(track_uri, device_id: device_id)
     return playback_error(playback, selected_user, track, track_uri, weights, excluded_user) unless playback[:status] == "success"
 
     SpotifyPlayEvent.create!(user: selected_user, spotify_track: track, selected_at: Time.current)

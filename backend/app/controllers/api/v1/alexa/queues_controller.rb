@@ -3,7 +3,7 @@ module Api
     module Alexa
       class QueuesController < BaseController
         def create
-          result = AlexaQueueService.new.play_next_track
+          result = AlexaQueueService.new.play_next_track(device_id: params[:device_id])
           render json: result, status: result[:status] == "success" ? :ok : :bad_request
         end
       end

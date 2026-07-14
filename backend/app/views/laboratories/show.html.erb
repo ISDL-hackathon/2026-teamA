@@ -482,9 +482,29 @@
   });
 
   document.getElementById("queue-play-button").addEventListener("click", async () => {
-    const response = await fetch(`${apiBase}/alexa/play_queue`, { method: "POST" });
-    const data = await response.json();
-    document.getElementById("queue-result").textContent = JSON.stringify(data, null, 2);
+    const queueResult = document.getElementById("queue-result");
+    queueResult.textContent = "選曲中...";
+
+    let deviceId = spotifyDeviceSelect.value;
+    if (!deviceId) {
+      await loadSpotifyDevices();
+      deviceId = spotifyDeviceSelect.value;
+    }
+
+    if (!deviceId) {
+      queueResult.textContent = "Spotify Connectの再生先を選択してください。MUSICの楽曲検索・登録を開いて、再生先を選んでから実行してください。";
+      setStatus("再生先を選択してください");
+      return;
+    }
+
+    const response = await fetch(`${apiBase}/alexa/play_queue`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ device_id: deviceId }),
+    });
+    const data = await response.json().catch(() => ({}));
+    queueResult.textContent = queueResultText(data);
+    setStatus(data.status === "success" ? "選曲した曲を再生しました" : (data.message || "選曲実行に失敗しました"));
   });
 
   async function searchTracks() {
@@ -718,6 +738,25 @@
     const container = document.getElementById("music-search-results");
     bindFavoriteAddButtons(container);
     bindFavoriteRemoveButtons(container);
+  }
+
+  function queueResultText(data) {
+    if (data.status === "success") {
+      return [
+        "選曲して再生しました。",
+        `ユーザー: ${data.selected_user || "-"}`,
+        `曲: ${data.selected_track || "-"}`,
+        `当選確率: ${Math.round((Number(data.probability) || 0) * 1000) / 10}%`,
+        data.excluded_user_name ? `今回除外: ${data.excluded_user_name}` : null,
+      ].filter(Boolean).join("\n");
+    }
+
+    return [
+      data.message || "選曲実行に失敗しました。",
+      data.selected_user ? `選ばれたユーザー: ${data.selected_user}` : null,
+      data.selected_track ? `選ばれた曲: ${data.selected_track}` : null,
+      data.code ? `code: ${data.code}` : null,
+    ].filter(Boolean).join("\n");
   }
 
   async function loadAccessLogs() {
