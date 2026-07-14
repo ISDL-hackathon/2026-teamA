@@ -11,6 +11,9 @@ Rails.application.routes.draw do
   patch "setup", to: "profiles#update"
   delete "setup", to: "auth#logout"
 
+  get "spotify/authorize", to: "spotify_authorizations#authorize", as: :spotify_authorize
+  get "spotify/callback", to: "spotify_authorizations#callback", as: :spotify_callback
+
   get "portal", to: "laboratories#show"
   get "laboratories/show"
 
@@ -23,6 +26,9 @@ Rails.application.routes.draw do
 
       namespace :spotify do
         get "search", to: "tracks#search"
+        get "devices", to: "tracks#devices"
+        post "play", to: "tracks#play"
+        post "pause", to: "tracks#pause"
         resources :tracks, only: [:index, :create, :destroy]
       end
 

@@ -29,7 +29,9 @@
   .inline-form { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
   .inline-form input { min-width: 0; padding: 14px 16px; border: 1px solid rgba(148,163,184,.35); border-radius: 8px; color: #f8fafc; background: #0f141a; }
   .inline-form button, .wide-button, .track-button { border: 1px solid rgba(255,255,255,.18); color: #f8fafc; background: rgba(20,184,166,.86); cursor: pointer; }
-  .inline-form button, .wide-button { padding: 12px 20px; border-radius: 8px; }
+  .inline-form button, .wide-button { display: inline-flex; align-items: center; justify-content: center; padding: 12px 20px; border-radius: 8px; text-decoration: none; }
+  .spotify-connect-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 0 0 14px; }
+  .spotify-connect-state { color: #d1fae5; font-size: 13px; }
   .music-section-title { margin: 22px 0 10px; color: #bae6fd; font-size: 15px; font-weight: 700; }
   .list-panel { display: grid; gap: 8px; }
   .track-row { display: grid; grid-template-columns: 52px 1fr auto auto; align-items: center; gap: 12px; padding: 10px; border-radius: 8px; background: rgba(255,255,255,.04); }
@@ -66,24 +68,8 @@
       <h1>研究室 3D ポータル</h1>
     </div>
     <div class="topbar-actions flex items-center gap-3">
-      
-      <details class="dropdown dropdown-end">
-        <summary class="btn btn-primary btn-outline list-none cursor-pointer m-0">
-          <%= current_user&.name %> ▾
-        </summary>
-        <ul class="portal-user-menu dropdown-content menu bg-base-200 rounded-box w-52 p-2 shadow-xl border border-white/10 mt-2">
-          <li>
-            <button type="button" data-open-card>
-              IDmの再設定
-            </button>
-          </li>
-          <li>
-            <%= button_to logout_path, method: :delete, class: "text-error" do %>
-              ログアウト
-            <% end %>
-          </li>
-        </ul>
-      </details>
+      <div class="portal-status" id="room-status"><%= notice.presence || alert.presence || current_user&.name || "API 準備中" %></div>
+      <%= button_to "Logout", logout_path, method: :delete, class: "btn btn-sm btn-outline" %>
     </div>
   </header>
 
@@ -117,9 +103,27 @@
     <div class="music-panel-header">
       <h2 class="portal-panel-title">楽曲検索・登録</h2>
     </div>
+    <div class="spotify-connect-row">
+      <%= link_to "Spotifyを連携", spotify_authorize_path, class: "wide-button" %>
+      <% if @spotify_connected %>
+        <span class="spotify-connect-state">連携済み: ryouアカウントのSpotify Player APIを使えます。</span>
+      <% else %>
+        <span class="muted">Alexa再生にはSpotify連携が必要です。</span>
+      <% end %>
+    </div>
     <% unless @spotify_env_ready %>
       <p class="muted">Spotify 検索を使うには .env に SPOTIFY_CLIENT_ID と SPOTIFY_CLIENT_SECRET を設定して、Rails を再起動してください。</p>
     <% end %>
+    <% unless @spotify_player_ready %>
+      <p class="muted">Alexaへ再生するには「Spotifyを連携」からryouアカウントで認可してください。</p>
+    <% end %>
+
+    <div class="inline-form" style="margin-bottom: 14px;">
+      <select id="spotify-device-select" class="input input-bordered" aria-label="再生先">
+        <option value="">再生先を読み込み中...</option>
+      </select>
+      <button id="spotify-device-refresh-button" type="button">再生先更新</button>
+    </div>
 
     <div class="inline-form">
       <input id="music-search-input" type="search" placeholder="曲名またはアーティスト名" autocomplete="off">
@@ -148,8 +152,7 @@
                 <strong class="is-added"><%= track.track_name %></strong>
                 <span><span class="track-kind"></span>楽曲・<%= track.artist_name %></span>
               </div>
-              <%= tag.button "▶", class: "track-button", type: "button", data: { preview_url: track.preview_url }, aria: { label: "プレビュー再生" } if track.preview_url.present? %>
-              <%= tag.button "↗", class: "track-button", type: "button", data: { spotify_url: "https://open.spotify.com/track/#{track.spotify_track_id}" }, aria: { label: "Spotifyで開く" } if track.preview_url.blank? %>
+              <%= tag.button "▶", class: "track-button", type: "button", data: { spotify_track_id: track.spotify_track_id }, aria: { label: "再生" } %>
               <button class="track-button is-added" type="button" data-remove-track="<%= track.id %>" data-remove-spotify-track-id="<%= track.spotify_track_id %>" aria-label="お気に入りから削除">✓</button>
             </article>
           <% end %>
@@ -296,42 +299,6 @@
     <pre id="queue-result" class="result-box"></pre>
   </section>
 
-  <dialog id="photo-modal" class="modal">
-    <div class="modal-box photo-modal-box max-w-4xl bg-base-100 text-base-content">
-      <form method="dialog">
-        <button class="photo-modal-close btn btn-sm btn-circle btn-ghost" type="submit" aria-label="閉じる">x</button>
-      </form>
-      <h2 class="portal-panel-title mb-5">写真を追加</h2>
-
-      <div class="grid gap-4">
-        <label class="form-control w-full">
-          <div class="label">
-            <span class="label-text">アップロードする写真</span>
-          </div>
-          
-          <input id="photo-input" class="file-input file-input-bordered file-input-primary w-full" type="file" accept="image/*" multiple>
-         
-          </label>
-
-        <div class="flex flex-wrap items-center gap-3">
-          <button id="photo-upload-button" class="btn btn-primary" type="button">アップロード</button>
-          <button id="photo-list-toggle" class="btn btn-outline" type="button">アップロードした写真</button>
-          <span class="muted" id="photo-count">0枚</span>
-        </div>
-
-        <p class="muted" id="photo-message">画像ファイルのみアップロードできます。</p>
-
-        <section id="photo-list-section" class="hidden">
-          <div id="photo-gallery" class="photo-gallery"></div>
-        </section>
-      </div>
-    </div>
-    <form method="dialog" class="modal-backdrop">
-      <button type="submit">閉じる</button>
-    </form>
-  </dialog>
-
-  <audio id="spotify-preview-player"></audio>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -353,6 +320,8 @@
   const photoCount = document.getElementById("photo-count");
   const previewPlayer = document.getElementById("spotify-preview-player");
   const musicSearchInput = document.getElementById("music-search-input");
+  const spotifyDeviceSelect = document.getElementById("spotify-device-select");
+  const spotifyDeviceRefreshButton = document.getElementById("spotify-device-refresh-button");
   const stayRows = Array.from(document.querySelectorAll("[data-stay-row]"));
   const staySortButtons = Array.from(document.querySelectorAll("[data-stay-sort]"));
   const stayViewButtons = Array.from(document.querySelectorAll("[data-stay-view]"));
@@ -375,8 +344,8 @@
   const favoriteTrackIds = new Set(
     Array.from(document.querySelectorAll("[data-favorite-track-id]")).map((element) => element.dataset.favoriteTrackId)
   );
-  let playingPreviewUrl = null;
-  let activePreviewButton = null;
+  let playingSpotifyTrackId = null;
+  let activePlaybackButton = null;
 
   document.querySelector("[data-open-music]").addEventListener("click", () => {
     closeCardModal();
@@ -384,6 +353,7 @@
     queuePanel.classList.remove("is-open");
     closePhotoModal();
     musicPanel.classList.add("is-open");
+    loadSpotifyDevices();
     musicSearchInput.focus();
   });
   document.querySelector("[data-close-music]").addEventListener("click", () => {
@@ -449,12 +419,33 @@
   sortStayRows("week");
   switchStayView("chart");
   renderCalendarMonth();
+  spotifyDeviceRefreshButton.addEventListener("click", loadSpotifyDevices);
+  loadSpotifyDevices();
   document.getElementById("music-search-button").addEventListener("click", searchTracks);
   document.getElementById("music-search-input").addEventListener("keydown", (event) => {
     if (event.key === "Enter") searchTracks();
   });
   bindFavoriteRemoveButtons();
   bindPreviewButtons();
+
+  async function loadSpotifyDevices() {
+    spotifyDeviceSelect.innerHTML = `<option value="">再生先を取得中...</option>`;
+    const response = await fetch(`${apiBase}/spotify/devices`);
+    const data = await response.json().catch(() => ({}));
+
+    if (data.status !== "success") {
+      spotifyDeviceSelect.innerHTML = `<option value="">再生先を取得できません</option>`;
+      setStatus(data.message || "Spotify再生先を取得できません");
+      return;
+    }
+
+    const devices = data.devices || [];
+    spotifyDeviceSelect.innerHTML = devices.map((device) => `
+      <option value="${escapeHtml(device.id)}" ${device.is_active ? "selected" : ""}>
+        ${escapeHtml(device.name)} / ${escapeHtml(device.type)}
+      </option>
+    `).join("") || `<option value="">Spotify Connect端末がありません</option>`;
+  }
 
   document.getElementById("card-register-button").addEventListener("click", async () => {
     const idm = document.getElementById("card-idm-input").value.trim();
@@ -562,62 +553,74 @@
   }
 
   function previewButtonHtml(track) {
-    const previewUrl = track.preview_url || "";
-    const spotifyUrl = track.external_urls?.spotify || `https://open.spotify.com/track/${track.spotify_track_id}`;
-    if (previewUrl) {
-      return `<button class="track-button" type="button" data-preview-url="${escapeHtml(previewUrl)}" aria-label="プレビュー再生">▶</button>`;
-    }
-
-    return `<button class="track-button" type="button" data-spotify-url="${escapeHtml(spotifyUrl)}" aria-label="Spotifyで開く">↗</button>`;
+    return `<button class="track-button" type="button" data-spotify-track-id="${escapeHtml(track.spotify_track_id)}" aria-label="再生">▶</button>`;
   }
 
   function bindPreviewButtons(scope = document) {
-    scope.querySelectorAll("[data-preview-url]").forEach((button) => {
-      button.addEventListener("click", () => togglePreview(button));
-    });
-
-    scope.querySelectorAll("[data-spotify-url]").forEach((button) => {
-      button.addEventListener("click", () => {
-        window.open(button.dataset.spotifyUrl, "_blank", "noopener");
-      });
+    scope.querySelectorAll("[data-spotify-track-id]").forEach((button) => {
+      button.addEventListener("click", () => toggleSpotifyPlayback(button));
     });
   }
 
-  function togglePreview(button) {
-    const previewUrl = button.dataset.previewUrl;
-
-    if (playingPreviewUrl === previewUrl && !previewPlayer.paused) {
-      previewPlayer.pause();
-      button.textContent = "▶";
-      activePreviewButton = null;
-      setStatus("再生を停止しました");
+  async function toggleSpotifyPlayback(button) {
+    const spotifyTrackId = button.dataset.spotifyTrackId;
+    if (!spotifyTrackId) return;
+    const deviceId = spotifyDeviceSelect.value;
+    if (!deviceId) {
+      setStatus("再生先を選択してください");
       return;
     }
 
-    document.querySelectorAll("[data-preview-url]").forEach((item) => {
-      item.textContent = "▶";
-    });
-    playingPreviewUrl = previewUrl;
-    activePreviewButton = button;
-    previewPlayer.src = previewUrl;
-    previewPlayer.play()
-      .then(() => {
-        button.textContent = "⏸";
-        setStatus("プレビュー再生中");
-      })
-      .catch(() => {
-        button.textContent = "▶";
-        activePreviewButton = null;
-        setStatus("ブラウザで再生できませんでした");
+    if (playingSpotifyTrackId === spotifyTrackId) {
+      setStatus("停止中");
+      const response = await fetch(`${apiBase}/spotify/pause`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ device_id: deviceId }),
       });
+      const data = await response.json().catch(() => ({}));
+
+      if (data.status === "success") {
+        resetPlaybackButtons();
+        setStatus("再生を停止しました");
+      } else {
+        setStatus(data.message || "停止に失敗しました");
+      }
+      return;
+    }
+
+    setStatus("再生中");
+    const response = await fetch(`${apiBase}/spotify/play`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ spotify_track_id: spotifyTrackId, device_id: deviceId }),
+    });
+    const data = await response.json().catch(() => ({}));
+
+    if (data.status === "success") {
+      resetPlaybackButtons();
+      playingSpotifyTrackId = spotifyTrackId;
+      activePlaybackButton = button;
+      button.textContent = "■";
+      button.setAttribute("aria-label", "停止");
+      setStatus("再生中");
+    } else if (data.code === "SPOTIFY_PLAYER_TOKEN_REQUIRED") {
+      resetPlaybackButtons();
+      setStatus("SPOTIFY_REFRESH_TOKEN が必要です");
+    } else {
+      resetPlaybackButtons();
+      setStatus(data.message || "再生に失敗しました");
+    }
   }
 
-  previewPlayer.addEventListener("ended", () => {
-    if (activePreviewButton) activePreviewButton.textContent = "▶";
-    activePreviewButton = null;
-    playingPreviewUrl = null;
-    setStatus("プレビュー再生が終了しました");
-  });
+  function resetPlaybackButtons() {
+    document.querySelectorAll("[data-spotify-track-id]").forEach((button) => {
+      button.textContent = "▶";
+      button.setAttribute("aria-label", "再生");
+    });
+    playingSpotifyTrackId = null;
+    activePlaybackButton = null;
+  }
 
   function refreshSearchResultButtons() {
     document.querySelectorAll("[data-track]").forEach((button) => {

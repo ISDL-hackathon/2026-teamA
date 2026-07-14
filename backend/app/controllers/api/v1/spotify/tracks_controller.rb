@@ -41,6 +41,27 @@ module Api
           head :no_content
         end
 
+        def devices
+          result = SpotifyPlayerService.new(@spotify_account).devices
+          render json: result, status: result[:status] == "success" ? :ok : :bad_request
+        end
+
+        def play
+          spotify_track_id = params[:spotify_track_id].presence
+          return render_error("Spotify track id required", "SPOTIFY_TRACK_ID_REQUIRED", :bad_request) if spotify_track_id.blank?
+
+          result = SpotifyPlayerService.new(@spotify_account).play_track!(
+            "spotify:track:#{spotify_track_id}",
+            device_id: params[:device_id]
+          )
+          render json: result, status: result[:status] == "success" ? :ok : :bad_request
+        end
+
+        def pause
+          result = SpotifyPlayerService.new(@spotify_account).pause!(device_id: params[:device_id])
+          render json: result, status: result[:status] == "success" ? :ok : :bad_request
+        end
+
         private
 
         def spotify_account
