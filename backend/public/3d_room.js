@@ -30,7 +30,7 @@ scene.add(ambientLight);
 renderer.outputEncoding = THREE.sRGBEncoding; 
 renderer.gammaFactor = 2.2; 
 
-// Load GLB Model 
+// Load Room GLB Model 
 const loader = new THREE.GLTFLoader(); 
 loader.load( 
   "/KC104_cropped.glb",
@@ -57,37 +57,28 @@ loader.load(
     console.error("Error loading model:", error);
   },
 );
+
+// Load Screen GLB Model
+let screen;
+
+loader.load("/Screen.glb", (gltf) => {
+
+    screen = gltf.scene;
+    screen.rotation.y = THREE.MathUtils.degToRad(90);
+    screen.scale.set(0.7, 0.6, 0.5);
+    screen.position.set(-4.5, 1, 1);
+
+    scene.add(screen);
+
+});
+
 let avatar = null;
 let avatarMixer = null; 
 let avatarActions = [];
 let currentAvatarAction = null;
 let avatarShadow = null;
 
-function playAvatarAnimationByName(name) {
-
-  if (!avatarMixer) return;
-
-  const clip = avatarActions.find((clip) => clip.name === name);
-
-  if (!clip) return;
-
-  const action = avatarMixer.clipAction(clip);
-
-  if (currentAvatarAction === action) return;
-
-  if (currentAvatarAction) {
-    currentAvatarAction.fadeOut(0.2);
-  }
-
-  currentAvatarAction = action;
-
-  currentAvatarAction
-    .reset()
-    .fadeIn(0.2)
-    .play();
-}
-
-
+// Load Avatar GLB Model 
 loader.load( 
   "animal-chick.glb",
   (gltf) => {
@@ -121,468 +112,34 @@ loader.load(
   }
 );
 
-// Wall
-const walls = [];
+//Animateion function to play avatar animations by name
+function playAvatarAnimationByName(name) {
 
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-4.75, 0, -7.8),
-    new THREE.Vector3(5.4, 4, -7.7)
-  )
-);
+  if (!avatarMixer) return;
 
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-4.85, 0, -7.7),
-    new THREE.Vector3(-4.75, 4, 9.75)
-  )
-);
+  const clip = avatarActions.find((clip) => clip.name === name);
 
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-4.75, 0, 9.75),
-    new THREE.Vector3(-3, 4, 9.85)
-  )
-);
+  if (!clip) return;
 
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-3, 0, 6.1),
-    new THREE.Vector3(-2.9, 4, 9.75)
-  )
-);
+  const action = avatarMixer.clipAction(clip);
 
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-2.9, 0, 6),
-    new THREE.Vector3(5.4, 4, 6.1)
-  )
-);
+  if (currentAvatarAction === action) return;
 
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(5.4, 0, -7.7),
-    new THREE.Vector3(5.5, 4, 6)
-  )
-);
+  if (currentAvatarAction) {
+    currentAvatarAction.fadeOut(0.2);
+  }
 
-// Objects
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(1.9, 0, -7.7),
-    new THREE.Vector3(5.4, 2, -4.9)
-  )
-);
+  currentAvatarAction = action;
 
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(4.8, 0, -4.9),
-    new THREE.Vector3(5.4, 2, -2.4)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(1.2, 0, -6.4),
-    new THREE.Vector3(1.9, 2, -5.1)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(1.6, 0, -4.3),
-    new THREE.Vector3(4, 2, -3)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(2.1, 0, -4.35),
-    new THREE.Vector3(2.6, 2, -4.3)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(2.1, 0, -3),
-    new THREE.Vector3(2.7, 2, -2.5)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(3.5, 0, -2.4),
-    new THREE.Vector3(4.8, 2, -1.6)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(3.2, 0, -1.7),
-    new THREE.Vector3(3.3, 2, 1.1)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(3, 0, -1.9),
-    new THREE.Vector3(3.2, 2, -1.6)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(2.7, 0, 0.2),
-    new THREE.Vector3(3.2, 2, 0.6)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(2.7, 0, 2.2),
-    new THREE.Vector3(3.05, 2, 2.6)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(2.2, 0, 2),
-    new THREE.Vector3(3.15, 2, 2.15)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(4, 0, -1.7),
-    new THREE.Vector3(4.5, 2, 3.9)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(3.05, 0, 2),
-    new THREE.Vector3(3.15, 2, 4.6)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(3.15, 0, 3.9),
-    new THREE.Vector3(4.5, 2, 4.6)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(4.2, 0, 4.6),
-    new THREE.Vector3(4.8, 2, 6)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(1.5, 0, 5.8),
-    new THREE.Vector3(4.2, 2, 6)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(0.8, 0, 5.6),
-    new THREE.Vector3(1.5, 2, 6)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-3.25, 0, 7.15),
-    new THREE.Vector3(-3, 2, 8.8)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-4.75, 0, 7.6),
-    new THREE.Vector3(-4.5, 2, 9.3)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-4.75, 0, 6),
-    new THREE.Vector3(-4.3, 2, 7.6)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-4.75, 0, 3.7),
-    new THREE.Vector3(-3.8, 2, 4.4)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-4.75, 0, -1.85),
-    new THREE.Vector3(-3.9, 2, 3.7)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-3.9, 0, 0.1),
-    new THREE.Vector3(-3.6, 2, 0.3)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-4.75, 0, -2.8),
-    new THREE.Vector3(-3.3, 2, -1.85)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-4.75, 0, -4),
-    new THREE.Vector3(-3.8, 2, -2.8)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-4.75, 0, -5.8),
-    new THREE.Vector3(-4, 2, -4)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-4.75, 0, -7.1),
-    new THREE.Vector3(-3.8, 2, -5.8)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-3.8, 0, -6.6),
-    new THREE.Vector3(-3.5, 2, -6.2)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-4.75, 0, -7.7),
-    new THREE.Vector3(-4.4, 2, -7.1)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-2.05, 0, -7.7),
-    new THREE.Vector3(-0.5, 2, -7.2)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-2.4, 0, -5.7),
-    new THREE.Vector3(-0.7, 2, -3)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-0.7, 0, -5.7),
-    new THREE.Vector3(-0.1, 2, -5)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-2.6, 0, -1.5),
-    new THREE.Vector3(-1.4, 2, -1.1)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-2.9, 0, -1.1),
-    new THREE.Vector3(-1, 2, -0.7)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-2.7, 0, -0.7),
-    new THREE.Vector3(-1.2, 2, -0.3)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-2, 0, -0.3),
-    new THREE.Vector3(-1.1, 2, 0.1)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(1.4, 0, -1.9),
-    new THREE.Vector3(2, 2, -1.7)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(0.8, 0, -1.7),
-    new THREE.Vector3(2.1, 2, -1.3)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(0.6, 0, -1.3),
-    new THREE.Vector3(2.4, 2, -0.9)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(0.5, 0, -0.9),
-    new THREE.Vector3(2.4, 2, -0.5)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(0.7, 0, -0.5),
-    new THREE.Vector3(2.1, 2, -0.1)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(1.2, 0, -0.1),
-    new THREE.Vector3(1.9, 2, 0.3)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-0.5, 0, 0.5),
-    new THREE.Vector3(0.2, 2, 0.8)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-1.2, 0, 0.8),
-    new THREE.Vector3(0.3, 2, 1.2)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-1.1, 0, 1.2),
-    new THREE.Vector3(0.6, 2, 1.6)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-1.2, 0, 1.6),
-    new THREE.Vector3(0.5, 2, 2)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-1.1, 0, 2),
-    new THREE.Vector3(0.2, 2, 2.4)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(0.9, 0, 2.7),
-    new THREE.Vector3(1.9, 2, 3.1)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(0.8, 0, 3.1),
-    new THREE.Vector3(2.1, 2, 3.5)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(0.7, 0, 3.5),
-    new THREE.Vector3(2.3, 2, 3.9)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(0.8, 0, 3.9),
-    new THREE.Vector3(2.4, 2, 4.3)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(1.3, 0, 4.3),
-    new THREE.Vector3(2.1, 2, 4.7)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-2, 0, 3.2),
-    new THREE.Vector3(-1.1, 2, 3.6)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-2.5, 0, 3.6),
-    new THREE.Vector3(-0.7, 2, 4)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-2.4, 0, 4),
-    new THREE.Vector3(-0.8, 2, 4.4)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-2.5, 0, 4.4),
-    new THREE.Vector3(-1, 2, 4.8)
-  )
-);
-
-walls.push(
-  new THREE.Box3(
-    new THREE.Vector3(-1.9, 0, 4.8),
-    new THREE.Vector3(-1.2, 2, 5.1)
-  )
-);
-
-/*
-// Wall helpers
-function addWallHelpers(boxes) {
-  boxes.forEach((wall) => {
-    const helper = new THREE.Box3Helper(wall);
-    scene.add(helper);
-  });
+  currentAvatarAction
+    .reset()
+    .fadeIn(0.2)
+    .play();
 }
-addWallHelpers(walls);
-*/
+
+
+// Wall
+const walls = window.roomWalls || [];
 
 // Handle window resize 
 window.addEventListener("resize", () => {
@@ -594,14 +151,85 @@ window.addEventListener("resize", () => {
  }
 );
 
-// Camera stays fixed in place and only changes its viewing direction.
+const defaultCameraPosition = new THREE.Vector3(0, 2.7, 1);
+const defaultCameraTarget = new THREE.Vector3(0, 1, 0);
+const screenCameraPosition = new THREE.Vector3(-2.5, 1.2, 1.7);
+const screenCameraTarget = new THREE.Vector3(-4.5, 1.5, 1.3);
+
+let cameraFollowEnabled = true;
+let activeCameraMode = "default";
+let cameraTransitionProgress = 1;
+const cameraTransitionSpeed = 0.04;
+let cameraStartPosition = defaultCameraPosition.clone();
+let cameraStartLookAt = defaultCameraTarget.clone();
+let cameraEndPosition = defaultCameraPosition.clone();
+let cameraEndLookAt = defaultCameraTarget.clone();
+let cameraLookAtTarget = defaultCameraTarget.clone();
+let autoMoveDirection = null;
+let autoMoveSteps = 0;
+let movementEnabled = true;
+
+function resetCameraToDefault() {
+  cameraFollowEnabled = true;
+  activeCameraMode = "default";
+  movementEnabled = true;
+  cameraTransitionProgress = 0;
+  cameraStartPosition.copy(camera.position);
+  cameraStartLookAt.copy(cameraLookAtTarget);
+  cameraEndPosition.copy(defaultCameraPosition);
+  cameraEndLookAt.copy(defaultCameraTarget);
+}
+
+function activateScreenCamera() {
+  if (!avatar) {
+    return;
+  }
+
+  cameraFollowEnabled = false;
+  activeCameraMode = "screen";
+  movementEnabled = false;
+  cameraTransitionProgress = 0;
+  cameraStartPosition.copy(camera.position);
+  cameraStartLookAt.copy(cameraLookAtTarget);
+  cameraEndPosition.copy(screenCameraPosition);
+  cameraEndLookAt.copy(screenCameraTarget);
+
+  avatar.position.set(-1.5, 0, 1);
+  autoMoveDirection = new THREE.Vector3(-1, 0, 0);
+  autoMoveSteps = 70;
+  Object.keys(keys).forEach((key) => {
+    keys[key] = false;
+  });
+}
+
 function updateCameraLookAt() {
   if (!avatar) {
     return;
   }
 
-  const lookAtTarget = avatar.position.clone().add(new THREE.Vector3(0, 1.2, 0));
-  camera.lookAt(lookAtTarget);
+  const desiredLookAt = cameraFollowEnabled
+    ? avatar.position.clone().add(new THREE.Vector3(0, 1.2, 0))
+    : screenCameraTarget.clone();
+
+  if (cameraFollowEnabled) {
+    cameraEndPosition.copy(defaultCameraPosition);
+    cameraEndLookAt.copy(desiredLookAt);
+  } else {
+    cameraEndPosition.copy(screenCameraPosition);
+    cameraEndLookAt.copy(screenCameraTarget);
+  }
+
+  if (cameraTransitionProgress < 1) {
+    cameraTransitionProgress = Math.min(1, cameraTransitionProgress + cameraTransitionSpeed);
+    camera.position.lerpVectors(cameraStartPosition, cameraEndPosition, cameraTransitionProgress);
+    cameraLookAtTarget.lerpVectors(cameraStartLookAt, cameraEndLookAt, cameraTransitionProgress);
+    camera.lookAt(cameraLookAtTarget);
+    return;
+  }
+
+  camera.position.copy(cameraEndPosition);
+  cameraLookAtTarget.copy(cameraEndLookAt);
+  camera.lookAt(cameraLookAtTarget);
 }
 
 canvas.addEventListener("wheel", (e) => {
@@ -617,6 +245,27 @@ canvas.addEventListener("wheel", (e) => {
   }
 });
 
+//Screen click event to open a new window with the screen content
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+window.addEventListener("click", (event) => {
+  if (!screen) {
+    return;
+  }
+
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+
+  const intersects = raycaster.intersectObject(screen, true);
+
+  if (intersects.length > 0) {
+    activateScreenCamera();
+  }
+});
+
+//collision detection
 const keys = {};
 const speed = 0.03;
 const avatarCollisionHalfSize = new THREE.Vector3(0.25, 0.8, 0.25);
@@ -642,7 +291,18 @@ function isAvatarColliding(position) {
 }
 
 window.addEventListener("keydown", (e) => {
-  keys[e.key.toLowerCase()] = true;
+  const key = e.key.toLowerCase();
+
+  if (key === "escape") {
+    resetCameraToDefault();
+    return;
+  }
+
+  if (!movementEnabled && ["w", "a", "s", "d"].includes(key)) {
+    return;
+  }
+
+  keys[key] = true;
 });
 
 window.addEventListener("keyup", (e) => {
@@ -661,9 +321,21 @@ function animate() {
     return;
   } 
 
-  const isMoving = keys["w"] || keys["s"] || keys["a"] || keys["d"];
+  const isMoving = movementEnabled && (keys["w"] || keys["s"] || keys["a"] || keys["d"]);
 
-  if (isMoving) {
+  if (autoMoveDirection && autoMoveSteps > 0) {
+    const proposedPosition = avatar.position.clone().add(autoMoveDirection.clone().multiplyScalar(speed));
+
+    if (!isAvatarColliding(proposedPosition)) {
+      avatar.position.copy(proposedPosition);
+      avatar.rotation.y = Math.atan2(autoMoveDirection.x, autoMoveDirection.z);
+      playAvatarAnimationByName("walk");
+      autoMoveSteps -= 1;
+    } else {
+      playAvatarAnimationByName("idle");
+      autoMoveSteps = 0;
+    }
+  } else if (isMoving) {
     playAvatarAnimationByName("walk");
   } else {
     playAvatarAnimationByName("idle");
@@ -681,58 +353,62 @@ function animate() {
 
   const moveDirection = new THREE.Vector3();
 
-  if (keys["w"]) {
-    moveDirection.add(cameraToAvatar);
-  }
-
-  if (keys["s"]) {
-    moveDirection.add(cameraToAvatar.clone().multiplyScalar(-1));
-  }
-
-  if (keys["a"]) {
-    moveDirection.add(
-      new THREE.Vector3(cameraToAvatar.z, 0, -cameraToAvatar.x),
-    );
-  }
-
-  if (keys["d"]) {
-    moveDirection.add(
-      new THREE.Vector3(-cameraToAvatar.z, 0, cameraToAvatar.x),
-    );
-  }
-
-  if (moveDirection.lengthSq() > 0) {
-    moveDirection.normalize();
-
-    const deltaX = moveDirection.x * speed;
-    const deltaZ = moveDirection.z * speed;
-    const nextPosition = avatar.position.clone();
-    const actualMove = new THREE.Vector3();
-
-    if (Math.abs(deltaX) > 0) {
-      const xOnlyPosition = nextPosition.clone();
-      xOnlyPosition.x += deltaX;
-
-      if (!isAvatarColliding(xOnlyPosition)) {
-        nextPosition.x += deltaX;
-        actualMove.x = deltaX;
-      }
+  if (movementEnabled) {
+    if (keys["w"]) {
+      moveDirection.add(cameraToAvatar);
     }
 
-    if (Math.abs(deltaZ) > 0) {
-      const zOnlyPosition = nextPosition.clone();
-      zOnlyPosition.z += deltaZ;
-
-      if (!isAvatarColliding(zOnlyPosition)) {
-        nextPosition.z += deltaZ;
-        actualMove.z = deltaZ;
-      }
+    if (keys["s"]) {
+      moveDirection.add(cameraToAvatar.clone().multiplyScalar(-1));
     }
 
-    if (actualMove.lengthSq() > 0) {
-      avatar.position.copy(nextPosition);
-      avatar.rotation.y = Math.atan2(actualMove.x, actualMove.z);
-      playAvatarAnimationByName("walk");
+    if (keys["a"]) {
+      moveDirection.add(
+        new THREE.Vector3(cameraToAvatar.z, 0, -cameraToAvatar.x),
+      );
+    }
+
+    if (keys["d"]) {
+      moveDirection.add(
+        new THREE.Vector3(-cameraToAvatar.z, 0, cameraToAvatar.x),
+      );
+    }
+
+    if (moveDirection.lengthSq() > 0) {
+      moveDirection.normalize();
+
+      const deltaX = moveDirection.x * speed;
+      const deltaZ = moveDirection.z * speed;
+      const nextPosition = avatar.position.clone();
+      const actualMove = new THREE.Vector3();
+
+      if (Math.abs(deltaX) > 0) {
+        const xOnlyPosition = nextPosition.clone();
+        xOnlyPosition.x += deltaX;
+
+        if (!isAvatarColliding(xOnlyPosition)) {
+          nextPosition.x += deltaX;
+          actualMove.x = deltaX;
+        }
+      }
+
+      if (Math.abs(deltaZ) > 0) {
+        const zOnlyPosition = nextPosition.clone();
+        zOnlyPosition.z += deltaZ;
+
+        if (!isAvatarColliding(zOnlyPosition)) {
+          nextPosition.z += deltaZ;
+          actualMove.z = deltaZ;
+        }
+      }
+
+      if (actualMove.lengthSq() > 0) {
+        avatar.position.copy(nextPosition);
+        avatar.rotation.y = Math.atan2(actualMove.x, actualMove.z);
+        playAvatarAnimationByName("walk");
+      } else {
+        playAvatarAnimationByName("idle");
+      }
     } else {
       playAvatarAnimationByName("idle");
     }

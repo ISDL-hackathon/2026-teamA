@@ -1,7 +1,7 @@
 module Api
   module V1
     class ScansController < BaseController
-      before_action :enticate_api_key!
+      before_action :authenticate_api_key!
 
       def create
         idm = FelicaCard.normalize_idm(params[:idm])
@@ -11,12 +11,14 @@ module Api
         return render_error("User not found for this card", "CARD_NOT_FOUND", :not_found) unless card
 
         log = RoomAccessService.new(card.user).record!
+        playback_result = log.in? ? AlexaQueueService.new.play_next_track : nil
 
         render json: {
           status: "success",
           user_name: card.user.name,
           action: log.action_type,
-          timestamp: log.timestamp.iso8601
+          timestamp: log.timestamp.iso8601,
+          playback: playback_result
         }
       rescue StandardError => e
         Rails.logger.error("[scan] #{e.class}: #{e.message}")
