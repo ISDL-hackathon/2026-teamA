@@ -8,8 +8,12 @@ class LaboratoriesController < ApplicationController
       token_expires_at: 1.hour.from_now
     )
     @favorite_tracks = @spotify_account.spotify_tracks.order(added_at: :desc)
-    @spotify_env_ready = ENV["SPOTIFY_ACCESS_TOKEN"].present? ||
-                         (ENV["SPOTIFY_CLIENT_ID"].present? && ENV["SPOTIFY_CLIENT_SECRET"].present?)
+    @spotify_env_ready = SpotifyEnv.fetch("SPOTIFY_ACCESS_TOKEN").present? ||
+                         (SpotifyEnv.fetch("SPOTIFY_CLIENT_ID").present? && SpotifyEnv.fetch("SPOTIFY_CLIENT_SECRET").present?)
+    @spotify_connected = @spotify_account.refresh_token.present? || @spotify_account.access_token.present?
+    @spotify_player_ready = @spotify_connected ||
+                            SpotifyEnv.fetch("SPOTIFY_REFRESH_TOKEN").present? ||
+                            SpotifyEnv.fetch("SPOTIFY_ACCESS_TOKEN").present?
     build_room_access_dashboard
   end
 

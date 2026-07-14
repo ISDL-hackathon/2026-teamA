@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_07_10_000000) do
+ActiveRecord::Schema[7.0].define(version: 2026_07_12_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -55,6 +55,17 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_10_000000) do
     t.index ["user_id"], name: "index_spotify_accounts_on_user_id"
   end
 
+  create_table "spotify_play_events", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "spotify_track_id", null: false
+    t.datetime "selected_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["selected_at"], name: "index_spotify_play_events_on_selected_at"
+    t.index ["spotify_track_id"], name: "index_spotify_play_events_on_spotify_track_id"
+    t.index ["user_id"], name: "index_spotify_play_events_on_user_id"
+  end
+
   create_table "spotify_tracks", force: :cascade do |t|
     t.bigint "spotify_account_id", null: false
     t.string "spotify_track_id", null: false
@@ -85,5 +96,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_10_000000) do
   add_foreign_key "felica_cards", "users"
   add_foreign_key "room_access_logs", "users"
   add_foreign_key "spotify_accounts", "users"
+  add_foreign_key "spotify_play_events", "spotify_tracks"
+  add_foreign_key "spotify_play_events", "users"
   add_foreign_key "spotify_tracks", "spotify_accounts"
 end
