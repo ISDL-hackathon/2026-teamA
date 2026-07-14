@@ -28,12 +28,12 @@ fi
 
 echo 'Building CSS...'
 npm run build:css
-
+echo 'CSS Build Finished!'
 # マイグレーション実行
 if [ "$RAILS_ENV" != "production" ]; then
   bundle exec rails db:create --quiet 2>/dev/null || true
 fi
-bundle exec rails db:migrate --quiet
+bundle exec rails db:migrate 
 
 # サーバーの競合を防ぐため過去の pid ファイルが残っていたら削除する処理
 if [ -f /app/tmp/pids/server.pid ]; then
