@@ -42,6 +42,21 @@
   .track-row strong.is-added { color: #1ed760; }
   .track-row span, .muted { color: #94a3b8; font-size: 13px; }
   .track-kind { display: inline-block; width: 11px; height: 11px; margin-right: 4px; border: 1px solid currentColor; border-radius: 2px; vertical-align: -1px; }
+  .track-button { position: relative; display: inline-grid; place-items: center; width: 36px; height: 36px; padding: 0; border-radius: 999px; font-size: 0; line-height: 1; }
+  .track-button::before, .track-button::after { content: ""; position: absolute; display: block; }
+  .track-button.icon-play, .track-button.icon-pause { border: 3px solid #f8fafc; background: #020617; box-shadow: 0 0 0 2px #020617; }
+  .track-button.icon-play::before { left: 13px; width: 0; height: 0; border-top: 8px solid transparent; border-bottom: 8px solid transparent; border-left: 13px solid #fff; }
+  .track-button.icon-pause::before, .track-button.icon-pause::after { top: 9px; width: 5px; height: 16px; border-radius: 1px; background: #fff; }
+  .track-button.icon-pause::before { left: 11px; }
+  .track-button.icon-pause::after { right: 11px; }
+  .track-button.icon-favorite { border: 2px solid #c72543; background: #fff; color: #c72543; }
+  .track-button.icon-favorite::before { content: "♥"; position: static; color: #c72543; font-size: 22px; line-height: 1; transform: translateY(1px); }
+  .track-button.icon-remove { border: 0; background: #ef1026; }
+  .track-button.icon-remove::before, .track-button.icon-remove::after { width: 22px; height: 5px; border-radius: 999px; background: #fff; }
+  .track-button.icon-remove::before { transform: rotate(45deg); }
+  .track-button.icon-remove::after { transform: rotate(-45deg); }
+  .track-button:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  .track-button:disabled { opacity: .55; cursor: default; transform: none; filter: none; }
   .track-menu { color: #cbd5e1; font-weight: 700; letter-spacing: 3px; }
   .track-icon-button { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 999px; color: #cbd5e1; background: transparent; font-size: 23px; line-height: 1; }
   .track-icon-button:hover { color: #f8fafc; background: rgba(255,255,255,.08); }
@@ -152,8 +167,8 @@
                 <strong class="is-added"><%= track.track_name %></strong>
                 <span><span class="track-kind"></span>楽曲・<%= track.artist_name %></span>
               </div>
-              <%= tag.button "▶", class: "track-button", type: "button", data: { spotify_track_id: track.spotify_track_id }, aria: { label: "再生" } %>
-              <button class="track-button is-added" type="button" data-remove-track="<%= track.id %>" data-remove-spotify-track-id="<%= track.spotify_track_id %>" aria-label="お気に入りから削除">✓</button>
+              <%= tag.button "", class: "track-button icon-play", type: "button", data: { spotify_track_id: track.spotify_track_id }, aria: { label: "再生" } %>
+              <button class="track-button icon-remove" type="button" data-remove-track="<%= track.id %>" data-remove-spotify-track-id="<%= track.spotify_track_id %>" aria-label="お気に入りから削除"></button>
             </article>
           <% end %>
         <% else %>
@@ -344,6 +359,11 @@
   const favoriteTrackIds = new Set(
     Array.from(document.querySelectorAll("[data-favorite-track-id]")).map((element) => element.dataset.favoriteTrackId)
   );
+  const favoriteTrackRecordIds = new Map(
+    Array.from(document.querySelectorAll("[data-remove-track]"))
+      .filter((button) => button.dataset.removeSpotifyTrackId)
+      .map((button) => [button.dataset.removeSpotifyTrackId, button.dataset.removeTrack])
+  );
   let playingSpotifyTrackId = null;
   let activePlaybackButton = null;
   let spotifyPlaybackRequestInFlight = false;
@@ -483,23 +503,20 @@
     }
 
     container.innerHTML = data.results.map((track) => `
-      <article class="track-row">
+      <article class="track-row" data-search-track="${encodeURIComponent(JSON.stringify(track))}">
         ${track.image_url ? `<img src="${escapeHtml(track.image_url)}" alt="">` : "<img alt=\"\">"}
         <div>
           <strong class="${favoriteTrackIds.has(track.spotify_track_id) ? "is-added" : ""}">${escapeHtml(track.track_name)}</strong>
           <span><span class="track-kind"></span>楽曲・${escapeHtml(track.artist_name || "")}</span>
         </div>
         ${previewButtonHtml(track)}
-        ${favoriteTrackIds.has(track.spotify_track_id)
-          ? `<button class="track-button is-added" type="button" disabled aria-label="登録済み">✓</button>`
-          : `<button class="track-button" type="button" data-track="${encodeURIComponent(JSON.stringify(track))}" aria-label="お気に入りに追加">＋</button>`}
+        ${favoriteActionButtonHtml(track)}
       </article>
     `).join("") || `<p class="muted">該当する曲がありません。</p>`;
 
     bindPreviewButtons(container);
-    container.querySelectorAll("[data-track]").forEach((button) => {
-      button.addEventListener("click", () => addTrack(JSON.parse(decodeURIComponent(button.dataset.track))));
-    });
+    bindFavoriteAddButtons(container);
+    bindFavoriteRemoveButtons(container);
     setStatus("検索完了");
   }
 
@@ -511,7 +528,10 @@
     });
     const data = await response.json();
     setStatus(data.status === "success" ? "お気に入りに追加しました" : data.message);
-    if (data.status === "success") favoriteTrackIds.add(track.spotify_track_id);
+    if (data.status === "success") {
+      favoriteTrackIds.add(track.spotify_track_id);
+      if (data.track?.id) favoriteTrackRecordIds.set(track.spotify_track_id, String(data.track.id));
+    }
     refreshSearchResultButtons();
     loadFavoriteTracks();
   }
@@ -526,6 +546,13 @@
       return;
     }
 
+    favoriteTrackIds.clear();
+    favoriteTrackRecordIds.clear();
+    data.tracks.forEach((track) => {
+      favoriteTrackIds.add(track.spotify_track_id);
+      favoriteTrackRecordIds.set(track.spotify_track_id, String(track.id));
+    });
+
     container.innerHTML = data.tracks.map((track) => `
       <article class="track-row" data-favorite-track-id="${track.spotify_track_id}">
         ${track.image_url ? `<img src="${escapeHtml(track.image_url)}" alt="">` : "<img alt=\"\">"}
@@ -534,7 +561,7 @@
           <span><span class="track-kind"></span>楽曲・${escapeHtml(track.artist_name)}</span>
         </div>
         ${previewButtonHtml(track)}
-        <button class="track-button is-added" type="button" data-remove-track="${track.id}" data-remove-spotify-track-id="${track.spotify_track_id}" aria-label="お気に入りから削除">✓</button>
+        <button class="track-button icon-remove" type="button" data-remove-track="${track.id}" data-remove-spotify-track-id="${track.spotify_track_id}" aria-label="お気に入りから削除"></button>
       </article>
     `).join("") || `<p class="muted">登録済みの曲はありません。</p>`;
 
@@ -542,19 +569,52 @@
     bindFavoriteRemoveButtons(container);
   }
 
-  function bindFavoriteRemoveButtons(scope = document) {
-    scope.querySelectorAll("[data-remove-track]").forEach((button) => {
-      button.addEventListener("click", async () => {
-        await fetch(`${apiBase}/spotify/tracks/${button.dataset.removeTrack}`, { method: "DELETE" });
-        if (button.dataset.removeSpotifyTrackId) favoriteTrackIds.delete(button.dataset.removeSpotifyTrackId);
-        setStatus("お気に入りから削除しました");
-        loadFavoriteTracks();
-      });
+  function bindFavoriteAddButtons(scope = document) {
+    scope.querySelectorAll("[data-track]").forEach((button) => {
+      if (button.dataset.favoriteAddBound === "true") return;
+      button.dataset.favoriteAddBound = "true";
+      button.addEventListener("click", () => addTrack(JSON.parse(decodeURIComponent(button.dataset.track))));
     });
   }
 
+  function bindFavoriteRemoveButtons(scope = document) {
+    scope.querySelectorAll("[data-remove-track]").forEach((button) => {
+      if (button.dataset.favoriteRemoveBound === "true") return;
+      button.dataset.favoriteRemoveBound = "true";
+      button.addEventListener("click", () => removeTrack(button));
+    });
+  }
+
+  async function removeTrack(button) {
+    const spotifyTrackId = button.dataset.removeSpotifyTrackId;
+    const removeTrackId = button.dataset.removeTrack || spotifyTrackId;
+    const response = await fetch(`${apiBase}/spotify/tracks/${encodeURIComponent(removeTrackId)}`, { method: "DELETE" });
+
+    if (!response.ok) {
+      setStatus("お気に入りから削除できませんでした");
+      return;
+    }
+
+    if (spotifyTrackId) {
+      favoriteTrackIds.delete(spotifyTrackId);
+      favoriteTrackRecordIds.delete(spotifyTrackId);
+    }
+    setStatus("お気に入りから削除しました");
+    refreshSearchResultButtons();
+    loadFavoriteTracks();
+  }
+
+  function favoriteActionButtonHtml(track) {
+    if (favoriteTrackIds.has(track.spotify_track_id)) {
+      const removeTrackId = favoriteTrackRecordIds.get(track.spotify_track_id) || track.spotify_track_id;
+      return `<button class="track-button icon-remove" type="button" data-remove-track="${escapeHtml(removeTrackId)}" data-remove-spotify-track-id="${escapeHtml(track.spotify_track_id)}" aria-label="お気に入りから削除"></button>`;
+    }
+
+    return `<button class="track-button icon-favorite" type="button" data-track="${encodeURIComponent(JSON.stringify(track))}" aria-label="お気に入りに追加"></button>`;
+  }
+
   function previewButtonHtml(track) {
-    return `<button class="track-button" type="button" data-spotify-track-id="${escapeHtml(track.spotify_track_id)}" aria-label="再生">▶</button>`;
+    return `<button class="track-button icon-play" type="button" data-spotify-track-id="${escapeHtml(track.spotify_track_id)}" aria-label="再生"></button>`;
   }
 
   function bindPreviewButtons(scope = document) {
@@ -618,7 +678,8 @@
         resetPlaybackButtons();
         playingSpotifyTrackId = spotifyTrackId;
         activePlaybackButton = button;
-        button.textContent = "■";
+        button.classList.remove("icon-play");
+        button.classList.add("icon-pause");
         button.setAttribute("aria-label", "停止");
         setStatus("再生中");
       } else if (data.code === "SPOTIFY_PLAYER_TOKEN_REQUIRED") {
@@ -639,7 +700,8 @@
 
   function resetPlaybackButtons() {
     document.querySelectorAll("[data-spotify-track-id]").forEach((button) => {
-      button.textContent = "▶";
+      button.classList.remove("icon-pause");
+      button.classList.add("icon-play");
       button.setAttribute("aria-label", "再生");
       button.disabled = false;
     });
@@ -648,14 +710,14 @@
   }
 
   function refreshSearchResultButtons() {
-    document.querySelectorAll("[data-track]").forEach((button) => {
-      const track = JSON.parse(decodeURIComponent(button.dataset.track));
-      if (!favoriteTrackIds.has(track.spotify_track_id)) return;
-
-      const row = button.closest(".track-row");
-      row.querySelector("strong").classList.add("is-added");
-      button.outerHTML = `<button class="track-button is-added" type="button" disabled aria-label="登録済み">✓</button>`;
+    document.querySelectorAll("[data-search-track]").forEach((row) => {
+      const track = JSON.parse(decodeURIComponent(row.dataset.searchTrack));
+      row.querySelector("strong").classList.toggle("is-added", favoriteTrackIds.has(track.spotify_track_id));
+      row.querySelector("[data-track], [data-remove-track]").outerHTML = favoriteActionButtonHtml(track);
     });
+    const container = document.getElementById("music-search-results");
+    bindFavoriteAddButtons(container);
+    bindFavoriteRemoveButtons(container);
   }
 
   async function loadAccessLogs() {

@@ -37,7 +37,11 @@ module Api
         end
 
         def destroy
-          @spotify_account.spotify_tracks.find(params[:id]).destroy!
+          track = if params[:id].to_s.match?(/\A\d+\z/)
+                    @spotify_account.spotify_tracks.find_by(id: params[:id])
+                  end
+          track ||= @spotify_account.spotify_tracks.find_by!(spotify_track_id: params[:id])
+          track.destroy!
           head :no_content
         end
 
