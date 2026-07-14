@@ -22,6 +22,7 @@ Rails.application.routes.draw do
       post "scan", to: "scans#create"
       resources :cards, only: [:create]
       resources :access_logs, only: [:index]
+      resources :photos, only: [:index, :create]
 
       namespace :spotify do
         get "search", to: "tracks#search"

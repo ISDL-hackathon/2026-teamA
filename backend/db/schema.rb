@@ -33,6 +33,18 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_12_000000) do
     t.index ["user_id"], name: "index_felica_cards_on_user_id"
   end
 
+  create_table "portal_photos", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "filename", null: false
+    t.string "content_type", null: false
+    t.integer "byte_size", null: false
+    t.text "image_data", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "created_at"], name: "index_portal_photos_on_user_id_and_created_at"
+    t.index ["user_id"], name: "index_portal_photos_on_user_id"
+  end
+
   create_table "room_access_logs", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.integer "action_type", null: false
@@ -94,6 +106,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_12_000000) do
   end
 
   add_foreign_key "felica_cards", "users"
+  add_foreign_key "portal_photos", "users"
   add_foreign_key "room_access_logs", "users"
   add_foreign_key "spotify_accounts", "users"
   add_foreign_key "spotify_play_events", "spotify_tracks"

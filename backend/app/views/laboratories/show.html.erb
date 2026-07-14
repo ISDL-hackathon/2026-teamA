@@ -3,10 +3,10 @@
   #canvas-3d { position: fixed; inset: 0; z-index: 0; width: 100vw; height: 100vh; }
   .portal-topbar, .portal-sidebar, .music-panel, .stay-panel, .card-panel, .queue-panel { position: fixed; z-index: 20; }
   .portal-topbar { top: 18px; left: 22px; right: 22px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; pointer-events: none; }
-  .portal-topbar .topbar-actions { pointer-events: auto; }
+  .portal-topbar .topbar-actions, .portal-topbar .dropdown { pointer-events: auto; }
   .portal-kicker { margin: 0; color: #7dd3fc; font-size: 12px; font-weight: 700; text-transform: uppercase; }
   .portal-topbar h1 { margin: 2px 0 0; font-size: clamp(22px, 3vw, 38px); letter-spacing: 0; }
-  .portal-status { max-width: 320px; padding: 10px 14px; border: 1px solid rgba(255,255,255,.18); border-radius: 8px; background: rgba(16,20,24,.72); color: #d1fae5; font-size: 13px; text-align: right; backdrop-filter: blur(10px); }
+  .portal-status { max-width: 320px; padding: 10px 14px; border: 1px solid rgba(255,255,255,.18); border-radius: 8px; font-size: 13px; text-align: right; backdrop-filter: blur(10px); }
   .portal-sidebar { left: 22px; bottom: 22px; display: grid; gap: 10px; width: min(280px, calc(100vw - 44px)); pointer-events: auto; }
   .portal-action { display: grid; gap: 4px; min-height: 62px; padding: 14px 16px; border: 1px solid rgba(255,255,255,.22); border-radius: 8px; color: #f8fafc; background: rgba(15,23,42,.88); text-align: left; cursor: default; box-shadow: 0 12px 34px rgba(0,0,0,.35); }
   .portal-action[data-open-music] { cursor: pointer; }
@@ -47,6 +47,15 @@
   .track-icon-button:hover { color: #f8fafc; background: rgba(255,255,255,.08); }
   .track-icon-button.is-added { color: #111827; background: #1ed760; font-size: 16px; }
   .result-box { min-height: 120px; margin-top: 14px; padding: 14px; overflow: auto; border-radius: 8px; color: #d1fae5; background: #0f141a; white-space: pre-wrap; }
+  .photo-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 12px; }
+  .photo-gallery figure { overflow: hidden; border: 1px solid rgba(148,163,184,.3); border-radius: 8px; background: rgba(15,23,42,.55); }
+  .photo-gallery img { width: 100%; aspect-ratio: 1; object-fit: cover; background: rgba(15,23,42,.9); }
+  .photo-gallery figcaption { padding: 8px; color: #94a3b8; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .photo-modal-box { position: relative; }
+  .photo-modal-close { position: absolute; top: 8px; right: 8px; }
+  .card-modal-box { position: relative; }
+  .card-modal-close { position: absolute; top: 8px; right: 8px; }
+  .portal-user-menu { z-index: 60; width: 13rem; margin-top: 8px; }
   @media (max-width: 720px) { .portal-topbar { flex-direction: column; } .music-panel, .stay-panel, .card-panel, .queue-panel { width: calc(100vw - 24px); padding: 22px; } .inline-form, .track-row, .stay-bar-row { grid-template-columns: 1fr; } .track-row img { display: none; } .portal-status { text-align: left; } .stay-calendar-scroll { overflow-x: auto; } .stay-calendar-grid { min-width: 784px; } }
 </style>
 
@@ -72,6 +81,10 @@
     <button class="portal-action btn btn-outline justify-start" type="button" data-open-card>
       <span>Card</span>
       カード登録
+    </button>
+    <button class="portal-action btn btn-outline justify-start" type="button" data-open-photo>
+      <span>Photo</span>
+      写真を追加
     </button>
     <button class="portal-action" type="button" data-open-stay>
       <span>Stay</span>
@@ -150,17 +163,27 @@
     </section>
   </section>
 
-  <section class="card-panel" id="card-panel" aria-label="カード登録">
-    <div class="card-panel-header">
-      <h2>カード登録</h2>
-      <button class="btn btn-sm btn-outline" type="button" data-close-card>閉じる</button>
+  <dialog id="card-panel" class="modal" aria-label="IDm再設定">
+    <div class="modal-box card-modal-box bg-base-100 text-base-content">
+      <form method="dialog">
+        <button class="card-modal-close btn btn-sm btn-circle btn-ghost" type="submit" data-close-card aria-label="閉じる">x</button>
+      </form>
+      <h2 class="portal-panel-title mb-5">IDmの再設定</h2>
+      <div class="form-control w-full">
+        <label class="label" for="card-idm-input">
+          <span class="label-text">ICカードのIDm</span>
+        </label>
+        <div class="join w-full">
+          <input id="card-idm-input" class="input input-bordered join-item w-full" type="text" placeholder="0123456789ABCDEF" autocomplete="off">
+          <button id="card-register-button" class="btn btn-primary join-item" type="button">登録</button>
+        </div>
+      </div>
+      <p class="muted mt-4">ICカードのIDmをログイン中のユーザーに登録します。</p>
     </div>
-    <div class="inline-form">
-      <input id="card-idm-input" type="text" placeholder="0123456789ABCDEF" autocomplete="off">
-      <button id="card-register-button" type="button">登録</button>
-    </div>
-    <p class="muted">ICカードのIDmをログイン中のユーザーに登録します。</p>
-  </section>
+    <form method="dialog" class="modal-backdrop">
+      <button type="submit">閉じる</button>
+    </form>
+  </dialog>
 
   <section class="stay-panel" id="stay-panel" aria-label="入退室ダッシュボード">
     <div class="stay-panel-header">
@@ -288,6 +311,13 @@
   const cardPanel = document.getElementById("card-panel");
   const stayPanel = document.getElementById("stay-panel");
   const queuePanel = document.getElementById("queue-panel");
+  const photoModal = document.getElementById("photo-modal");
+  const photoInput = document.getElementById("photo-input");
+  const photoGallery = document.getElementById("photo-gallery");
+  const photoListSection = document.getElementById("photo-list-section");
+  const photoListToggle = document.getElementById("photo-list-toggle");
+  const photoMessage = document.getElementById("photo-message");
+  const photoCount = document.getElementById("photo-count");
   const previewPlayer = document.getElementById("spotify-preview-player");
   const musicSearchInput = document.getElementById("music-search-input");
   const spotifyDeviceSelect = document.getElementById("spotify-device-select");
@@ -318,9 +348,10 @@
   let activePlaybackButton = null;
 
   document.querySelector("[data-open-music]").addEventListener("click", () => {
-    cardPanel.classList.remove("is-open");
+    closeCardModal();
     stayPanel.classList.remove("is-open");
     queuePanel.classList.remove("is-open");
+    closePhotoModal();
     musicPanel.classList.add("is-open");
     loadSpotifyDevices();
     musicSearchInput.focus();
@@ -329,21 +360,18 @@
     musicPanel.classList.remove("is-open");
     setStatus("<%= j current_user.name %>");
   });
-  document.querySelector("[data-open-card]").addEventListener("click", () => {
-    musicPanel.classList.remove("is-open");
-    stayPanel.classList.remove("is-open");
-    queuePanel.classList.remove("is-open");
-    cardPanel.classList.add("is-open");
-    document.getElementById("card-idm-input").focus();
+  document.querySelectorAll("[data-open-card]").forEach((button) => {
+    button.addEventListener("click", openCardModal);
   });
   document.querySelector("[data-close-card]").addEventListener("click", () => {
-    cardPanel.classList.remove("is-open");
+    closeCardModal();
     setStatus("<%= j current_user.name %>");
   });
   document.querySelector("[data-open-stay]").addEventListener("click", () => {
     musicPanel.classList.remove("is-open");
-    cardPanel.classList.remove("is-open");
+    closeCardModal();
     queuePanel.classList.remove("is-open");
+    closePhotoModal();
     stayPanel.classList.add("is-open");
   });
   document.querySelector("[data-close-stay]").addEventListener("click", () => {
@@ -352,13 +380,27 @@
   });
   document.querySelector("[data-open-queue]").addEventListener("click", () => {
     musicPanel.classList.remove("is-open");
-    cardPanel.classList.remove("is-open");
+    closeCardModal();
     stayPanel.classList.remove("is-open");
+    closePhotoModal();
     queuePanel.classList.add("is-open");
   });
   document.querySelector("[data-close-queue]").addEventListener("click", () => {
     queuePanel.classList.remove("is-open");
     setStatus("<%= j current_user.name %>");
+  });
+  document.querySelector("[data-open-photo]").addEventListener("click", () => {
+    musicPanel.classList.remove("is-open");
+    closeCardModal();
+    stayPanel.classList.remove("is-open");
+    queuePanel.classList.remove("is-open");
+    renderPhotoGallery();
+    photoModal.showModal();
+  });
+  document.getElementById("photo-upload-button").addEventListener("click", uploadPhotos);
+  photoListToggle.addEventListener("click", () => {
+    photoListSection.classList.toggle("hidden");
+    renderPhotoGallery();
   });
   staySortButtons.forEach((button) => {
     button.addEventListener("click", () => sortStayRows(button.dataset.staySort));
@@ -607,6 +649,109 @@
 
   function setStatus(message) {
     document.getElementById("room-status").textContent = message;
+  }
+
+  function closePhotoModal() {
+    if (photoModal.open) photoModal.close();
+  }
+
+  function openCardModal() {
+    musicPanel.classList.remove("is-open");
+    stayPanel.classList.remove("is-open");
+    queuePanel.classList.remove("is-open");
+    closePhotoModal();
+    closeUserMenu();
+    if (!cardPanel.open) cardPanel.showModal();
+    document.getElementById("card-idm-input").focus();
+  }
+
+  function closeCardModal() {
+    if (cardPanel.open) cardPanel.close();
+  }
+
+  function closeUserMenu() {
+    document.querySelectorAll(".portal-topbar details.dropdown").forEach((dropdown) => {
+      dropdown.removeAttribute("open");
+    });
+  }
+
+  async function uploadPhotos() {
+    const files = Array.from(photoInput.files || []);
+    if (files.length === 0) {
+      photoMessage.textContent = "写真を選択してください。";
+      return;
+    }
+
+    const imageFiles = files.filter((file) => file.type.startsWith("image/"));
+    if (imageFiles.length !== files.length) {
+      photoMessage.textContent = "画像ファイル以外はアップロードできません。";
+    }
+    if (imageFiles.length === 0) return;
+
+    const oversizedFiles = imageFiles.filter((file) => file.size > 5 * 1024 * 1024);
+    if (oversizedFiles.length > 0) {
+      photoMessage.textContent = "5MBを超える写真はアップロードできません。";
+      return;
+    }
+
+    try {
+      const newPhotos = await Promise.all(imageFiles.map((file) => readPhotoFile(file)));
+      const responses = await Promise.all(newPhotos.map((photo) => fetch(`${apiBase}/photos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ photo }),
+      })));
+
+      const failed = responses.find((response) => !response.ok);
+      if (failed) {
+        const data = await failed.json();
+        photoMessage.textContent = data.message || "写真のアップロードに失敗しました。";
+        return;
+      }
+
+      photoInput.value = "";
+      photoListSection.classList.remove("hidden");
+      photoMessage.textContent = `${newPhotos.length}枚の写真をアップロードしました。`;
+      setStatus("写真をアップロードしました");
+      renderPhotoGallery();
+    } catch {
+      photoMessage.textContent = "写真のアップロードに失敗しました。";
+    }
+  }
+
+  function readPhotoFile(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve({
+        filename: file.name,
+        content_type: file.type,
+        byte_size: file.size,
+        image_data: reader.result,
+      });
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function renderPhotoGallery() {
+    photoMessage.textContent = "写真を読み込み中です。";
+    const response = await fetch(`${apiBase}/photos`);
+    const data = await response.json();
+
+    if (data.status !== "success") {
+      photoMessage.textContent = data.message || "写真を取得できませんでした。";
+      return;
+    }
+
+    const photos = data.photos || [];
+    photoCount.textContent = `${data.count || photos.length}枚`;
+    photoGallery.innerHTML = photos.map((photo) => `
+      <figure>
+        <img src="${escapeHtml(photo.image_data)}" alt="${escapeHtml(photo.filename)}">
+        <figcaption title="${escapeHtml(photo.filename)}">${escapeHtml(photo.filename)}</figcaption>
+      </figure>
+    `).join("") || `<p class="muted">アップロードした写真はまだありません。</p>`;
+    photoMessage.textContent = "画像ファイルのみアップロードできます。";
   }
 
   function switchStayView(view) {
