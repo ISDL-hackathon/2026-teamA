@@ -116,8 +116,8 @@ function createRoomRouletteBoard() {
     side: THREE.DoubleSide,
   });
   roomRouletteMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 1.42), material);
-  roomRouletteMesh.position.set(0.35, 1.90, 5.55);// ルーレットの位置
-  roomRouletteMesh.rotation.y = Math.PI;
+  roomRouletteMesh.position.set(3, 1.90, -7.55);// ルーレットの位置
+  roomRouletteMesh.rotation.y = THREE.MathUtils.degToRad(-3); // ルーレットの向き
   scene.add(roomRouletteMesh);
   drawRoomRoulette();
 }
@@ -291,7 +291,7 @@ loader.load(
   (gltf) => {
     avatar = gltf.scene;
     avatar.scale.set(0.5, 0.5, 0.5);
-    avatar.position.set(-0.5, 0, -2);
+    avatar.position.set(-0.5, 0, -0.5);
     scene.add(avatar);
 
     const shadowMaterial = new THREE.MeshBasicMaterial({
@@ -360,10 +360,12 @@ window.addEventListener("resize", () => {
  }
 );
 
-const defaultCameraPosition = new THREE.Vector3(0, 2.7, 1);
+const defaultCameraPosition = new THREE.Vector3(0, 2.7, 2);
 const defaultCameraTarget = new THREE.Vector3(0, 1, 0);
 const screenCameraPosition = new THREE.Vector3(-2.5, 1.2, 1.7);
 const screenCameraTarget = new THREE.Vector3(-4.5, 1.5, 1.3);
+const rouletteCameraPosition = new THREE.Vector3(1.8, 1.3, -6);
+const rouletteCameraTarget = new THREE.Vector3(2.3, 1.4, -7.2);
 
 let cameraFollowEnabled = true;
 let activeCameraMode = "default";
@@ -381,15 +383,21 @@ let movementHintTimer = null;
 const movementHintDelay = 1000;
 
 function updateCameraHint() {
-  cameraHint.classList.toggle("is-visible", activeCameraMode === "screen");
-  movementHint.classList.toggle("is-visible", activeCameraMode !== "screen" && movementHintTimer !== null);
+  cameraHint.classList.toggle(
+    "is-visible",
+    activeCameraMode === "screen" || activeCameraMode === "roulette"
+  );
+  movementHint.classList.toggle(
+    "is-visible",
+    activeCameraMode === "default" && movementHintTimer !== null
+  );
 }
 
 function resetMovementHintTimer() {
   clearTimeout(movementHintTimer);
   movementHint.classList.remove("is-visible");
   movementHintTimer = window.setTimeout(() => {
-    if (activeCameraMode !== "screen") {
+    if (activeCameraMode === "default") {
       movementHint.classList.add("is-visible");
     }
   }, movementHintDelay);
@@ -409,7 +417,7 @@ function resetCameraToDefault() {
   updateCameraHint();
 }
 
-function activateScreenCamera() {
+function activateCameraToTarget(position, target, mode) {
   if (!avatar) {
     return;
   }
@@ -418,21 +426,32 @@ function activateScreenCamera() {
   }
 
   cameraFollowEnabled = false;
-  activeCameraMode = "screen";
+  activeCameraMode = mode;
   movementEnabled = false;
   cameraTransitionProgress = 0;
   cameraStartPosition.copy(camera.position);
   cameraStartLookAt.copy(cameraLookAtTarget);
-  cameraEndPosition.copy(screenCameraPosition);
-  cameraEndLookAt.copy(screenCameraTarget);
+  cameraEndPosition.copy(position);
+  cameraEndLookAt.copy(target);
 
-  avatar.position.set(-1.5, 0, 1);
-  autoMoveDirection = new THREE.Vector3(-1, 0, 0);
-  autoMoveSteps = 70;
   Object.keys(keys).forEach((key) => {
     keys[key] = false;
   });
   updateCameraHint();
+}
+
+function activateScreenCamera() {
+  activateCameraToTarget(screenCameraPosition, screenCameraTarget, "screen");
+  avatar.position.set(-1.5, 0, 1);
+  autoMoveDirection = new THREE.Vector3(-1, 0, 0);
+  autoMoveSteps = 70;
+}
+
+function activateRouletteCamera() {
+  activateCameraToTarget(rouletteCameraPosition, rouletteCameraTarget, "roulette");
+  avatar.position.set(0, 0, -7.2);
+  autoMoveDirection = new THREE.Vector3(1, 0, 0);
+  autoMoveSteps = 70;
 }
 
 function updateCameraLookAt() {
@@ -442,14 +461,16 @@ function updateCameraLookAt() {
 
   const desiredLookAt = cameraFollowEnabled
     ? avatar.position.clone().add(new THREE.Vector3(0, 1.2, 0))
-    : screenCameraTarget.clone();
+    : activeCameraMode === "roulette"
+      ? rouletteCameraTarget.clone()
+      : screenCameraTarget.clone();
 
   if (cameraFollowEnabled) {
     cameraEndPosition.copy(defaultCameraPosition);
     cameraEndLookAt.copy(desiredLookAt);
   } else {
-    cameraEndPosition.copy(screenCameraPosition);
-    cameraEndLookAt.copy(screenCameraTarget);
+    cameraEndPosition.copy(activeCameraMode === "roulette" ? rouletteCameraPosition : screenCameraPosition);
+    cameraEndLookAt.copy(activeCameraMode === "roulette" ? rouletteCameraTarget : screenCameraTarget);
   }
 
   if (cameraTransitionProgress < 1) {
@@ -478,11 +499,22 @@ canvas.addEventListener("wheel", (e) => {
   }
 });
 
-//Screen click event to open a new window with the screen content
+function isObjectInHierarchy(object, ancestor) {
+  let current = object;
+  while (current) {
+    if (current === ancestor) {
+      return true;
+    }
+    current = current.parent;
+  }
+  return false;
+}
+
+//Screen and roulette board click handling
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 window.addEventListener("click", (event) => {
-  if (!screen) {
+  if (!screen && !roomRouletteMesh) {
     return;
   }
 
@@ -491,9 +523,16 @@ window.addEventListener("click", (event) => {
 
   raycaster.setFromCamera(mouse, camera);
 
-  const intersects = raycaster.intersectObject(screen, true);
+  const intersects = raycaster.intersectObjects([screen, roomRouletteMesh].filter(Boolean), true);
 
-  if (intersects.length > 0) {
+  if (intersects.length === 0) {
+    return;
+  }
+
+  const hitObject = intersects[0].object;
+  if (isObjectInHierarchy(hitObject, roomRouletteMesh)) {
+    activateRouletteCamera();
+  } else if (isObjectInHierarchy(hitObject, screen)) {
     activateScreenCamera();
   }
 });
