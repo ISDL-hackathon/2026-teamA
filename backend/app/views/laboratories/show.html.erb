@@ -227,7 +227,7 @@
           <button id="card-register-button" class="btn btn-primary join-item" type="button">登録</button>
         </div>
       </div>
-      <p class="muted mt-4">ICカードのIDmをログイン中のユーザーに登録します。</p>
+      <p class="muted mt-4">ICカードのIDmをログイン中のユーザーに再設定します。</p>
     </div>
     <form method="dialog" class="modal-backdrop">
       <button type="submit">閉じる</button>
@@ -525,7 +525,13 @@
       body: JSON.stringify({ idm }),
     });
     const data = await response.json();
-    setStatus(data.status === "success" ? "カードを登録しました" : data.message);
+    if (data.status === "success") {
+      setStatus("IDmを再設定しました");
+      closeCardModal();
+      document.getElementById("card-idm-input").value = "";
+    } else {
+      setStatus(data.message);
+    }
   });
 
   document.getElementById("queue-play-button").addEventListener("click", toggleQueueRoulette);
