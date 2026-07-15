@@ -1,7 +1,6 @@
 class User < ApplicationRecord
   has_many :felica_cards, dependent: :destroy
   has_many :room_access_logs, dependent: :destroy
-  has_many :portal_photos, dependent: :destroy
   has_many :spotify_play_events, dependent: :destroy
   has_one :spotify_account, dependent: :destroy
 
