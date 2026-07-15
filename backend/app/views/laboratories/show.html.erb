@@ -8,11 +8,8 @@
   .portal-topbar h1 { margin: 2px 0 0; font-size: clamp(22px, 3vw, 38px); letter-spacing: 0; }
   .portal-status { max-width: 320px; padding: 10px 14px; border: 1px solid rgba(255,255,255,.18); border-radius: 8px; font-size: 13px; text-align: right; backdrop-filter: blur(10px); }
   .portal-sidebar { left: 22px; bottom: 22px; display: grid; gap: 10px; width: min(280px, calc(100vw - 44px)); pointer-events: auto; }
-  .portal-action { display: grid; gap: 4px; min-height: 62px; padding: 14px 16px; border: 1px solid rgba(255,255,255,.22); border-radius: 8px; color: #f8fafc; background: rgba(15,23,42,.88); text-align: left; cursor: default; box-shadow: 0 12px 34px rgba(0,0,0,.35); }
-  .portal-action[data-open-music] { cursor: pointer; }
-  .portal-action[data-open-music]:hover { border-color: rgba(147,197,253,.62); background: rgba(15,23,42,.96); }
-  .portal-action[data-open-stay], .portal-action[data-open-card], .portal-action[data-open-queue] { cursor: pointer; }
-  .portal-action[data-open-stay]:hover, .portal-action[data-open-card]:hover, .portal-action[data-open-queue]:hover { border-color: rgba(134,239,172,.62); background: rgba(15,23,42,.96); }
+  .portal-action { display: grid; gap: 4px; min-height: 62px; padding: 14px 16px; border: 1px solid rgba(255,255,255,.22); border-radius: 8px; color: #f8fafc; background: rgba(15,23,42,.88); text-align: left; cursor: pointer; box-shadow: 0 12px 34px rgba(0,0,0,.35); }
+  .portal-action:hover { border-color: rgba(255,255,255,.62); background: rgba(15,23,42,.96); color: #f8fafc; }
   .portal-action span { color: #93c5fd; font-size: 12px; font-weight: 700; text-transform: uppercase; }
   .music-panel, .stay-panel, .card-panel, .queue-panel { display: none; top: 50%; left: 50%; width: min(1040px, calc(100vw - 48px)); max-height: min(720px, calc(100vh - 48px)); overflow: auto; padding: 28px; border: 1px solid rgba(148,163,184,.35); border-radius: 8px; background: rgba(20,26,32,.94); box-shadow: 0 24px 80px rgba(0,0,0,.42); backdrop-filter: blur(12px); transform: translate(-50%, -50%); pointer-events: auto; }
   .music-panel.is-open, .stay-panel.is-open, .card-panel.is-open, .queue-panel.is-open { display: block; }
@@ -84,6 +81,8 @@
   .photo-card-title { color: #e2e8f0; font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .photo-modal-box { position: relative; border: 1px solid rgba(148,163,184,.24); }
   .photo-modal-close { position: absolute; top: 12px; right: 12px; }
+  .card-modal-box { position: relative; border: 1px solid rgba(148,163,184,.24); }
+  .card-modal-close { position: absolute; top: 12px; right: 12px; display: grid; place-items: center; width: 2rem; height: 2rem; min-height: 2rem; padding: 0; font-size: 18px; line-height: 1; }
   .photo-upload-zone { border: 1px dashed rgba(125,211,252,.46); border-radius: 8px; background: rgba(14,165,233,.08); padding: 16px; }
   .photo-view[hidden] { display: none; }
   .modal.is-open { display: grid; visibility: visible; opacity: 1; pointer-events: auto; }
@@ -126,7 +125,7 @@
       <span>写真</span>
       写真を追加
     </button>
-    <button class="portal-action" type="button" data-open-stay>
+    <button class="portal-action btn btn-outline justify-start" type="button" data-open-stay>
       <span>滞在</span>
       滞在ログ
     </button>
@@ -219,7 +218,7 @@
   <dialog id="card-panel" class="modal" aria-label="IDm再設定">
     <div class="modal-box card-modal-box bg-base-100 text-base-content">
       <form method="dialog">
-      <button class="card-modal-close btn btn-sm btn-circle btn-ghost" type="submit" data-close-card aria-label="閉じる">閉じる</button>
+        <button class="card-modal-close btn btn-sm btn-circle btn-ghost" type="submit" data-close-card aria-label="閉じる">×</button>
       </form>
       <h2 class="portal-panel-title mb-5">IDmの再設定</h2>
       <div class="form-control w-full">
@@ -227,7 +226,7 @@
           <span class="label-text">ICカードのIDm</span>
         </label>
         <div class="join w-full">
-          <input id="card-idm-input" class="input input-bordered join-item w-full" type="text" placeholder="0123456789ABCDEF" autocomplete="off">
+          <input id="card-idm-input" class="input input-bordered join-item w-full" type="text" value="<%= @current_idm %>" placeholder="0123456789ABCDEF" autocomplete="off" data-current-idm="<%= @current_idm %>">
           <button id="card-register-button" class="btn btn-primary join-item" type="button">登録</button>
         </div>
       </div>
@@ -599,7 +598,8 @@
     if (data.status === "success") {
       setStatus("IDmを再設定しました");
       closeCardModal();
-      document.getElementById("card-idm-input").value = "";
+      document.getElementById("card-idm-input").value = data.card?.idm || idm;
+      document.getElementById("card-idm-input").dataset.currentIdm = data.card?.idm || idm;
     } else {
       setStatus(data.message);
     }
@@ -1213,7 +1213,9 @@
     } else {
       cardPanel.classList.add("is-open");
     }
-    document.getElementById("card-idm-input").focus();
+    const cardIdmInput = document.getElementById("card-idm-input");
+    cardIdmInput.value = cardIdmInput.dataset.currentIdm || cardIdmInput.value;
+    cardIdmInput.focus();
   }
 
   function closeCardModal() {

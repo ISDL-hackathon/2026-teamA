@@ -3,6 +3,7 @@ class LaboratoriesController < ApplicationController
   before_action :require_completed_profile!
 
   def show
+    @current_idm = current_user.felica_cards.first&.idm
     @spotify_account = current_user.spotify_account || current_user.create_spotify_account!(
       spotify_user_id: "user-#{current_user.id}",
       token_expires_at: 1.hour.from_now
