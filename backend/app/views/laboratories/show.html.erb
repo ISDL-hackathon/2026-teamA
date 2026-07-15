@@ -86,6 +86,7 @@
   .photo-modal-close { position: absolute; top: 12px; right: 12px; }
   .photo-upload-zone { border: 1px dashed rgba(125,211,252,.46); border-radius: 8px; background: rgba(14,165,233,.08); padding: 16px; }
   .photo-view[hidden] { display: none; }
+  .modal.is-open { display: grid; visibility: visible; opacity: 1; pointer-events: auto; }
   .portal-user-menu { z-index: 60; width: 13rem; margin-top: 8px; }
   .camera-hint { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 30; padding: 10px 14px; border: 1px solid rgba(255,255,255,.18); border-radius: 999px; background: rgba(2,6,23,.74); color: #f8fafc; font-size: 13px; font-weight: 600; letter-spacing: .02em; backdrop-filter: blur(10px); pointer-events: none; opacity: 0; transition: opacity .2s ease; }
   .camera-hint.is-visible { opacity: 1; }
@@ -524,14 +525,8 @@
     queuePanel.classList.remove("is-open");
     setStatus("<%= j current_user.name %>");
   });
-  document.querySelector("[data-open-photo]")?.addEventListener("click", () => {
-    musicPanel.classList.remove("is-open");
-    closeCardModal();
-    stayPanel.classList.remove("is-open");
-    queuePanel.classList.remove("is-open");
-    switchPhotoView("upload");
-    if (photoModal?.showModal) photoModal.showModal();
-    renderPhotoGallery();
+  document.querySelectorAll("[data-open-photo]").forEach((button) => {
+    button.addEventListener("click", openPhotoModal);
   });
   document.getElementById("photo-upload-button")?.addEventListener("click", uploadPhotos);
   photoViewButtons.forEach((button) => {
@@ -1171,7 +1166,40 @@
   }
 
   function closePhotoModal() {
-    if (photoModal?.open) photoModal.close();
+    if (!photoModal) return;
+    if (photoModal.close && photoModal.open) {
+      photoModal.close();
+    } else {
+      photoModal.removeAttribute("open");
+      photoModal.classList.remove("is-open");
+    }
+  }
+
+  function openPhotoModal() {
+    musicPanel.classList.remove("is-open");
+    closeCardModal();
+    stayPanel.classList.remove("is-open");
+    queuePanel.classList.remove("is-open");
+    switchPhotoView("upload");
+
+    if (!photoModal) {
+      setStatus("写真モーダルを読み込めませんでした");
+      return;
+    }
+
+    try {
+      if (photoModal.showModal && !photoModal.open) {
+        photoModal.showModal();
+      } else {
+        photoModal.setAttribute("open", "");
+        photoModal.classList.add("is-open");
+      }
+    } catch {
+      photoModal.setAttribute("open", "");
+      photoModal.classList.add("is-open");
+    }
+
+    renderPhotoGallery();
   }
 
   function openCardModal() {
