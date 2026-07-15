@@ -20,14 +20,21 @@ module Api
         render_error(e.record.errors.full_messages.to_sentence, "PHOTO_INVALID", :unprocessable_entity)
       end
 
+      def destroy
+        current_user.portal_photos.find(params[:id]).destroy!
+        head :no_content
+      end
+
       private
 
       def photo_params
-        params.require(:photo).permit(:filename, :content_type, :byte_size, :image_data)
+        params.require(:photo).permit(:filename, :content_type, :byte_size, :image_data, :category)
       end
 
       def photo_json(photo)
-        photo.as_json(only: [:id, :filename, :content_type, :byte_size, :image_data, :created_at])
+        photo.as_json(only: [:id, :filename, :content_type, :byte_size, :image_data, :category, :created_at]).merge(
+          category_label: PortalPhoto::CATEGORIES.fetch(photo.category, photo.category)
+        )
       end
     end
   end

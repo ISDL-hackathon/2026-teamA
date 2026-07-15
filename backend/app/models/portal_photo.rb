@@ -1,9 +1,16 @@
 class PortalPhoto < ApplicationRecord
   MAX_IMAGE_SIZE = 5.megabytes
+  CATEGORIES = {
+    "lab_trip" => "旅行（研究室メンバー）",
+    "conference" => "学会",
+    "event" => "イベント",
+    "other" => "その他"
+  }.freeze
 
   belongs_to :user
 
-  validates :filename, :content_type, :image_data, presence: true
+  validates :filename, :content_type, :image_data, :category, presence: true
+  validates :category, inclusion: { in: CATEGORIES.keys }
   validates :byte_size, numericality: { greater_than: 0, less_than_or_equal_to: MAX_IMAGE_SIZE }
   validate :image_content_type
   validate :image_data_format

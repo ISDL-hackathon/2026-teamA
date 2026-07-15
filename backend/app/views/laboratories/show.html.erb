@@ -77,12 +77,15 @@
   .roulette-member { display: grid; grid-template-columns: 10px 1fr auto; align-items: center; gap: 7px; color: #dbeafe; font-size: 12px; }
   .roulette-swatch { width: 10px; height: 10px; border-radius: 999px; }
   .roulette-member.is-selected { color: #fef08a; font-weight: 700; }
-  .photo-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 12px; }
-  .photo-gallery figure { overflow: hidden; border: 1px solid rgba(148,163,184,.3); border-radius: 8px; background: rgba(15,23,42,.55); }
-  .photo-gallery img { width: 100%; aspect-ratio: 1; object-fit: cover; background: rgba(15,23,42,.9); }
-  .photo-gallery figcaption { padding: 8px; color: #94a3b8; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .photo-modal-box { position: relative; }
-  .photo-modal-close { position: absolute; top: 8px; right: 8px; }
+  .photo-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(156px, 1fr)); gap: 14px; }
+  .photo-card { overflow: hidden; border: 1px solid rgba(148,163,184,.26); border-radius: 8px; background: rgba(15,23,42,.72); box-shadow: 0 14px 32px rgba(2,6,23,.2); }
+  .photo-card img { width: 100%; aspect-ratio: 1; object-fit: cover; background: rgba(15,23,42,.9); }
+  .photo-card-body { display: grid; gap: 8px; padding: 10px; }
+  .photo-card-title { color: #e2e8f0; font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .photo-modal-box { position: relative; border: 1px solid rgba(148,163,184,.24); }
+  .photo-modal-close { position: absolute; top: 12px; right: 12px; }
+  .photo-upload-zone { border: 1px dashed rgba(125,211,252,.46); border-radius: 8px; background: rgba(14,165,233,.08); padding: 16px; }
+  .photo-view[hidden] { display: none; }
   .portal-user-menu { z-index: 60; width: 13rem; margin-top: 8px; }
   .camera-hint { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 30; padding: 10px 14px; border: 1px solid rgba(255,255,255,.18); border-radius: 999px; background: rgba(2,6,23,.74); color: #f8fafc; font-size: 13px; font-weight: 600; letter-spacing: .02em; backdrop-filter: blur(10px); pointer-events: none; opacity: 0; transition: opacity .2s ease; }
   .camera-hint.is-visible { opacity: 1; }
@@ -348,6 +351,68 @@
     <pre id="queue-result" class="result-box"></pre>
   </section>
 
+  <dialog id="photo-modal" class="modal">
+    <div class="modal-box photo-modal-box max-w-4xl bg-base-100 text-base-content">
+      <form method="dialog">
+        <button class="photo-modal-close btn btn-sm btn-circle btn-ghost" type="submit" aria-label="閉じる">×</button>
+      </form>
+      <div class="mb-5">
+        <h2 class="portal-panel-title">写真管理</h2>
+        <p class="muted mt-2">研究室の写真をカテゴリごとに登録できます。</p>
+      </div>
+
+      <div class="tabs tabs-boxed mb-5">
+        <button id="photo-upload-tab" class="tab tab-active" type="button" data-photo-view-button="upload">写真を追加</button>
+        <button id="photo-gallery-tab" class="tab" type="button" data-photo-view-button="gallery">アップロードした写真</button>
+      </div>
+
+      <section class="photo-view grid gap-4" data-photo-view="upload">
+        <div class="photo-upload-zone">
+          <div class="grid gap-4 md:grid-cols-2">
+            <label class="form-control w-full" for="photo-category-select">
+              <div class="label">
+                <span class="label-text font-semibold">項目</span>
+              </div>
+              <select id="photo-category-select" class="select select-bordered select-primary w-full">
+                <option value="lab_trip">旅行（研究室メンバー）</option>
+                <option value="conference">学会</option>
+                <option value="event">イベント</option>
+                <option value="other">その他</option>
+              </select>
+            </label>
+
+            <label class="form-control w-full" for="photo-input">
+              <div class="label">
+                <span class="label-text font-semibold">写真</span>
+              </div>
+              <input id="photo-input" class="file-input file-input-bordered file-input-primary w-full" type="file" accept="image/*" multiple>
+            </label>
+          </div>
+        </div>
+
+        <div class="alert bg-base-200 border border-base-300">
+          <span id="photo-message">画像ファイルのみアップロードできます。1枚5MBまでです。</span>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <span class="badge badge-outline" id="photo-count">0枚</span>
+          <button id="photo-upload-button" class="btn btn-primary" type="button">アップロード</button>
+        </div>
+      </section>
+
+      <section class="photo-view grid gap-4" data-photo-view="gallery" hidden>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h3 class="m-0 text-base font-semibold">アップロードした写真</h3>
+          <button id="photo-gallery-refresh-button" class="btn btn-sm btn-outline" type="button">更新</button>
+        </div>
+        <div id="photo-gallery" class="photo-gallery"></div>
+      </section>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button type="submit">閉じる</button>
+    </form>
+  </dialog>
+
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -364,10 +429,12 @@
   const photoModal = document.getElementById("photo-modal");
   const photoInput = document.getElementById("photo-input");
   const photoGallery = document.getElementById("photo-gallery");
-  const photoListSection = document.getElementById("photo-list-section");
-  const photoListToggle = document.getElementById("photo-list-toggle");
+  const photoCategorySelect = document.getElementById("photo-category-select");
   const photoMessage = document.getElementById("photo-message");
   const photoCount = document.getElementById("photo-count");
+  const photoViewButtons = Array.from(document.querySelectorAll("[data-photo-view-button]"));
+  const photoViews = Array.from(document.querySelectorAll("[data-photo-view]"));
+  const photoGalleryRefreshButton = document.getElementById("photo-gallery-refresh-button");
   const previewPlayer = document.getElementById("spotify-preview-player");
   const musicSearchInput = document.getElementById("music-search-input");
   const spotifyDeviceSelect = document.getElementById("spotify-device-select");
@@ -462,13 +529,22 @@
     closeCardModal();
     stayPanel.classList.remove("is-open");
     queuePanel.classList.remove("is-open");
-    renderPhotoGallery();
+    switchPhotoView("upload");
     if (photoModal?.showModal) photoModal.showModal();
+    renderPhotoGallery();
   });
   document.getElementById("photo-upload-button")?.addEventListener("click", uploadPhotos);
-  photoListToggle?.addEventListener("click", () => {
-    photoListSection?.classList.toggle("hidden");
-    renderPhotoGallery();
+  photoViewButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      switchPhotoView(button.dataset.photoViewButton);
+      if (button.dataset.photoViewButton === "gallery") renderPhotoGallery();
+    });
+  });
+  photoGalleryRefreshButton?.addEventListener("click", renderPhotoGallery);
+  photoGallery?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-delete-photo]");
+    if (!button) return;
+    deletePhoto(button.dataset.deletePhoto);
   });
   staySortButtons.forEach((button) => {
     button.addEventListener("click", () => sortStayRows(button.dataset.staySort));
@@ -1128,6 +1204,7 @@
 
   async function uploadPhotos() {
     const files = Array.from(photoInput.files || []);
+    const category = photoCategorySelect?.value || "other";
     if (files.length === 0) {
       photoMessage.textContent = "写真を選択してください。";
       return;
@@ -1146,7 +1223,7 @@
     }
 
     try {
-      const newPhotos = await Promise.all(imageFiles.map((file) => readPhotoFile(file)));
+      const newPhotos = await Promise.all(imageFiles.map((file) => readPhotoFile(file, category)));
       const responses = await Promise.all(newPhotos.map((photo) => fetch(`${apiBase}/photos`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1161,16 +1238,16 @@
       }
 
       photoInput.value = "";
-      photoListSection.classList.remove("hidden");
       photoMessage.textContent = `${newPhotos.length}枚の写真をアップロードしました。`;
       setStatus("写真をアップロードしました");
+      switchPhotoView("gallery");
       renderPhotoGallery();
     } catch {
       photoMessage.textContent = "写真のアップロードに失敗しました。";
     }
   }
 
-  function readPhotoFile(file) {
+  function readPhotoFile(file, category) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve({
@@ -1178,6 +1255,7 @@
         content_type: file.type,
         byte_size: file.size,
         image_data: reader.result,
+        category,
       });
       reader.onerror = reject;
       reader.readAsDataURL(file);
@@ -1199,12 +1277,40 @@
     const photos = data.photos || [];
     if (photoCount) photoCount.textContent = `${data.count || photos.length}枚`;
     photoGallery.innerHTML = photos.map((photo) => `
-      <figure>
+      <figure class="photo-card">
         <img src="${escapeHtml(photo.image_data)}" alt="${escapeHtml(photo.filename)}">
-        <figcaption title="${escapeHtml(photo.filename)}">${escapeHtml(photo.filename)}</figcaption>
+        <figcaption class="photo-card-body">
+          <span class="badge badge-primary badge-sm">${escapeHtml(photo.category_label || photo.category || "その他")}</span>
+          <span class="photo-card-title" title="${escapeHtml(photo.filename)}">${escapeHtml(photo.filename)}</span>
+          <button class="btn btn-error btn-sm btn-outline" type="button" data-delete-photo="${photo.id}">削除</button>
+        </figcaption>
       </figure>
     `).join("") || `<p class="muted">アップロードした写真はまだありません。</p>`;
     photoMessage.textContent = "画像ファイルのみアップロードできます。";
+  }
+
+  async function deletePhoto(photoId) {
+    if (!photoId) return;
+
+    const response = await fetch(`${apiBase}/photos/${photoId}`, { method: "DELETE" });
+    if (!response.ok) {
+      setStatus("写真を削除できませんでした");
+      return;
+    }
+
+    setStatus("写真を削除しました");
+    renderPhotoGallery();
+  }
+
+  function switchPhotoView(view) {
+    photoViews.forEach((section) => {
+      section.hidden = section.dataset.photoView !== view;
+    });
+
+    photoViewButtons.forEach((button) => {
+      const isActive = button.dataset.photoViewButton === view;
+      button.classList.toggle("tab-active", isActive);
+    });
   }
 
   function switchStayView(view) {
