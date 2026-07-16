@@ -29,6 +29,12 @@ After editing scripts/pasori-reader.env, start it with:
 
 sudo systemctl enable --now room-portal-pasori.service
 
+The setup script creates a local Python virtual environment at:
+
+.venv-pasori
+
+This avoids Raspberry Pi OS's externally-managed Python restriction.
+
 4. Check status and logs
 ------------------------
 systemctl status room-portal-pasori.service

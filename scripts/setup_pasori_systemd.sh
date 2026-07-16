@@ -8,11 +8,17 @@ ENV_FILE="${SCRIPT_DIR}/pasori-reader.env"
 ENV_EXAMPLE="${SCRIPT_DIR}/pasori-reader.env.example"
 SERVICE_PATH="/etc/systemd/system/${SERVICE_NAME}"
 PYTHON_BIN="$(command -v python3)"
+VENV_DIR="${REPO_DIR}/.venv-pasori"
+VENV_PYTHON="${VENV_DIR}/bin/python"
 
 echo "[1/5] Installing PaSoRi dependencies..."
 sudo apt update
-sudo apt install -y python3-pip pcscd pcsc-tools libpcsclite-dev
-"${PYTHON_BIN}" -m pip install --user pyscard
+sudo apt install -y python3-pip python3-venv pcscd pcsc-tools libpcsclite-dev
+
+echo "Creating Python virtual environment..."
+"${PYTHON_BIN}" -m venv "${VENV_DIR}"
+"${VENV_PYTHON}" -m pip install --upgrade pip
+"${VENV_PYTHON}" -m pip install pyscard
 
 echo "[2/5] Enabling pcscd..."
 sudo systemctl enable --now pcscd
@@ -36,7 +42,7 @@ Type=simple
 User=${USER}
 WorkingDirectory=${REPO_DIR}
 EnvironmentFile=${ENV_FILE}
-ExecStart=${PYTHON_BIN} ${SCRIPT_DIR}/pasori_rcs300_reader.py
+ExecStart=${VENV_PYTHON} ${SCRIPT_DIR}/pasori_rcs300_reader.py
 Restart=always
 RestartSec=5
 
