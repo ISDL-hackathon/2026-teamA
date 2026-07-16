@@ -23,11 +23,12 @@ module Api
       private
 
       def photo_params
-        params.require(:photo).permit(:filename, :content_type, :byte_size, :image_data)
+        params.require(:photo).permit(:filename, :content_type, :byte_size, :image_data, :category)
       end
 
       def photo_json(photo)
-        photo.as_json(only: [:id, :filename, :content_type, :byte_size, :image_data, :created_at])
+        photo.as_json(only: [:id, :filename, :content_type, :byte_size, :image_data, :category, :created_at])
+             .merge(category_label: photo.category_label)
       end
     end
   end

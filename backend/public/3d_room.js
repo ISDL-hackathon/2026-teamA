@@ -74,8 +74,8 @@ loader.load("/Screen.glb", (gltf) => {
 
     screen1 = gltf.scene;
     screen1.rotation.y = THREE.MathUtils.degToRad(90);
-    screen1.scale.set(0.5, 0.5, 0.5);
-    screen1.position.set(-4.5, 1.3, 1);
+    screen1.scale.set(0.39, 0.57, 0.5);
+    screen1.position.set(-4.5, 1.12, 1);
 
     scene.add(screen1);
 
@@ -86,8 +86,8 @@ loader.load("/Screen.glb", (gltf) => {
 
     screen2 = gltf.scene;
     screen2.rotation.y = THREE.MathUtils.degToRad(90);
-    screen2.scale.set(0.5, 0.5, 0.5);
-    screen2.position.set(-4.5, 1.3, -5);
+    screen2.scale.set(0.39, 0.57, 0.5);
+    screen2.position.set(-4.5, 1.12, -5);
 
     scene.add(screen2);
 
@@ -98,8 +98,8 @@ loader.load("/Screen.glb", (gltf) => {
 
     screen3 = gltf.scene;
     screen3.rotation.y = THREE.MathUtils.degToRad(270);
-    screen3.scale.set(0.5, 0.5, 0.5);
-    screen3.position.set(5, 1.3, -4);
+    screen3.scale.set(0.39, 0.57, 0.5);
+    screen3.position.set(4.8, 1.12, -4);
 
     scene.add(screen3);
 
@@ -110,52 +110,198 @@ loader.load("/Screen.glb", (gltf) => {
 
     screen4 = gltf.scene;
     screen4.rotation.y = THREE.MathUtils.degToRad(180);
-    screen4.scale.set(0.5, 0.5, 0.5);
-    screen4.position.set(0, 0.3, 5.9);
+    screen4.scale.set(0.39, 0.57, 0.5);
+    screen4.position.set(0, 0.12, 5.9);
 
     scene.add(screen4);
 
 });
 
-// ルーレット表示
 // Uploaded photos are stored as data URLs in PortalPhoto and exposed by
-// GET /api/v1/photos. Show the newest photos on the room screens.
+// GET /api/v1/photos. Each screen displays only its assigned category.
+const emptyPhotoTexture = new THREE.DataTexture(new Uint8Array([17, 17, 17, 255]), 1, 1);
+emptyPhotoTexture.needsUpdate = true;
+
+function createPhotoScreenMaterial() {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      currentTexture: { value: emptyPhotoTexture },
+      incomingTexture: { value: emptyPhotoTexture },
+      currentAspect: { value: 1 },
+      incomingAspect: { value: 1 },
+      transitionProgress: { value: 0 },
+      transitionDirection: { value: 1 },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform sampler2D currentTexture;
+      uniform sampler2D incomingTexture;
+      uniform float currentAspect;
+      uniform float incomingAspect;
+      uniform float transitionProgress;
+      uniform float transitionDirection;
+      varying vec2 vUv;
+
+      vec3 fittedUv(vec2 uv, float imageAspect) {
+        const float screenAspect = 1.3333333;
+        if (imageAspect > screenAspect) {
+          float visibleHeight = screenAspect / imageAspect;
+          float margin = (1.0 - visibleHeight) * 0.5;
+          if (uv.y < margin || uv.y > 1.0 - margin) return vec3(0.0, 0.0, 0.0);
+          return vec3(uv.x, (uv.y - margin) / visibleHeight, 1.0);
+        }
+
+        float visibleWidth = imageAspect / screenAspect;
+        float margin = (1.0 - visibleWidth) * 0.5;
+        if (uv.x < margin || uv.x > 1.0 - margin) return vec3(0.0, 0.0, 0.0);
+        return vec3((uv.x - margin) / visibleWidth, uv.y, 1.0);
+      }
+
+      void main() {
+        float shiftedX = vUv.x + transitionDirection * transitionProgress;
+        vec3 fittedSample;
+        vec4 color;
+        if (shiftedX < 0.0) {
+          fittedSample = fittedUv(vec2(shiftedX + 1.0, vUv.y), incomingAspect);
+          color = fittedSample.z > 0.5 ? texture2D(incomingTexture, fittedSample.xy) : vec4(0.066, 0.066, 0.066, 1.0);
+        } else if (shiftedX > 1.0) {
+          fittedSample = fittedUv(vec2(shiftedX - 1.0, vUv.y), incomingAspect);
+          color = fittedSample.z > 0.5 ? texture2D(incomingTexture, fittedSample.xy) : vec4(0.066, 0.066, 0.066, 1.0);
+        } else {
+          fittedSample = fittedUv(vec2(shiftedX, vUv.y), currentAspect);
+          color = fittedSample.z > 0.5 ? texture2D(currentTexture, fittedSample.xy) : vec4(0.066, 0.066, 0.066, 1.0);
+        }
+        gl_FragColor = vec4(color.rgb, 1.0);
+      }
+    `,
+    side: THREE.DoubleSide,
+  });
+}
+
 const photoScreenPanels = [
-  { position: [-4.22, 1.45, 1], rotationY: 90 },
-  { position: [-4.22, 1.45, -5], rotationY: 90 },
-  { position: [4.72, 1.45, -4], rotationY: -90 },
-  { position: [0, 0.45, 5.62], rotationY: 180 },
-].map(({ position, rotationY }) => {
-  const material = new THREE.MeshBasicMaterial({ color: 0x111111, side: THREE.DoubleSide });
-  const panel = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.76), material);
+  { category: "lab_trip", position: [-4.48, 1.95, 1], rotationY: 90 },
+  { category: "conference", position: [-4.48, 1.95, -5], rotationY: 90 },
+  { category: "event", position: [4.78, 1.95, -4], rotationY: -90 },
+  { category: "other", position: [0, 0.95, 5.88], rotationY: 180 },
+].map(({ category, position, rotationY }) => {
+  const material = createPhotoScreenMaterial();
+  const panel = new THREE.Mesh(new THREE.PlaneGeometry(2, 1.5), material);
   panel.position.set(...position);
   panel.rotation.y = THREE.MathUtils.degToRad(rotationY);
+  panel.userData.photoScreen = {
+    basePosition: panel.position.clone(),
+    category,
+    currentIndex: 0,
+    images: [],
+    requestId: 0,
+    transition: null,
+  };
   scene.add(panel);
   return panel;
 });
 
 let photoScreenLoadId = 0;
+const photoScreenTransitionDuration = 460;
 
-function setPhotoScreenImage(panel, imageData) {
-  const loadId = photoScreenLoadId;
-  new THREE.TextureLoader().load(
-    imageData,
-    (texture) => {
-      if (loadId !== photoScreenLoadId) {
-        texture.dispose();
-        return;
-      }
+function loadPhotoTexture(imageData) {
+  return new Promise((resolve, reject) => {
+    new THREE.TextureLoader().load(imageData, resolve, undefined, reject);
+  });
+}
 
-      texture.encoding = THREE.sRGBEncoding;
-      const previousTexture = panel.material.map;
-      panel.material.map = texture;
-      panel.material.color.set(0xffffff);
-      panel.material.needsUpdate = true;
-      if (previousTexture) previousTexture.dispose();
-    },
-    undefined,
-    () => console.warn("Failed to load an uploaded photo for the room screen"),
-  );
+function textureAspect(texture) {
+  const image = texture.image;
+  const width = image.naturalWidth || image.width;
+  const height = image.naturalHeight || image.height;
+  return width && height ? width / height : 1;
+}
+
+async function showPhotoOnScreen(panel, photo, direction = 0) {
+  const state = panel.userData.photoScreen;
+  const requestId = ++state.requestId;
+  try {
+    const texture = await loadPhotoTexture(photo.image_data);
+    if (requestId !== state.requestId) {
+      texture.dispose();
+      return;
+    }
+
+    texture.encoding = THREE.sRGBEncoding;
+    const aspect = textureAspect(texture);
+    if (state.transition?.incomingTexture) state.transition.incomingTexture.dispose();
+
+    const material = panel.material;
+    if (direction === 0 || material.uniforms.currentTexture.value === emptyPhotoTexture) {
+      const previousTexture = material.uniforms.currentTexture.value;
+      state.transition = null;
+      material.uniforms.currentTexture.value = texture;
+      material.uniforms.incomingTexture.value = emptyPhotoTexture;
+      material.uniforms.currentAspect.value = aspect;
+      material.uniforms.incomingAspect.value = 1;
+      material.uniforms.transitionProgress.value = 0;
+      if (previousTexture !== emptyPhotoTexture) previousTexture.dispose();
+      return;
+    }
+
+    state.transition = {
+      direction,
+      incomingTexture: texture,
+      incomingAspect: aspect,
+      outgoingTexture: material.uniforms.currentTexture.value,
+      startedAt: performance.now(),
+    };
+    material.uniforms.incomingTexture.value = texture;
+    material.uniforms.incomingAspect.value = aspect;
+    material.uniforms.transitionDirection.value = direction;
+    material.uniforms.transitionProgress.value = 0;
+  } catch {
+    console.warn("Failed to load an uploaded photo for the room screen");
+  }
+}
+
+function cyclePhotoScreen(panel, step) {
+  const state = panel.userData.photoScreen;
+  if (state.images.length < 2 || state.transition) return;
+
+  state.currentIndex = (state.currentIndex + step + state.images.length) % state.images.length;
+  // A positive step enters from the right; a negative step enters from the left.
+  showPhotoOnScreen(panel, state.images[state.currentIndex], step);
+}
+
+function updatePhotoScreenTransitions(now) {
+  photoScreenPanels.forEach((panel) => {
+    const state = panel.userData.photoScreen;
+    const transition = state.transition;
+    if (!transition) return;
+
+    const progress = Math.min((now - transition.startedAt) / photoScreenTransitionDuration, 1);
+    panel.material.uniforms.transitionProgress.value = progress;
+
+    if (progress === 1) {
+      panel.material.uniforms.currentTexture.value = transition.incomingTexture;
+      panel.material.uniforms.incomingTexture.value = emptyPhotoTexture;
+      panel.material.uniforms.currentAspect.value = transition.incomingAspect;
+      panel.material.uniforms.incomingAspect.value = 1;
+      panel.material.uniforms.transitionProgress.value = 0;
+      transition.outgoingTexture?.dispose();
+      state.transition = null;
+    }
+  });
+}
+
+function shuffledPhotos(photos) {
+  const shuffled = [...photos];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+  return shuffled;
 }
 
 async function refreshRoomPhotos() {
@@ -166,12 +312,12 @@ async function refreshRoomPhotos() {
 
     const data = await response.json();
     const photos = Array.isArray(data.photos) ? data.photos : [];
-    if (photos.length === 0) return;
-
-    photoScreenPanels.forEach((panel, index) => {
-      const photo = photos[index % photos.length];
-      if (photo?.image_data && loadId === photoScreenLoadId) {
-        setPhotoScreenImage(panel, photo.image_data);
+    photoScreenPanels.forEach((panel) => {
+      const state = panel.userData.photoScreen;
+      state.images = shuffledPhotos(photos.filter((photo) => photo.category === state.category));
+      state.currentIndex = 0;
+      if (state.images[0]?.image_data && loadId === photoScreenLoadId) {
+        showPhotoOnScreen(panel, state.images[0]);
       }
     });
   } catch (error) {
@@ -182,6 +328,7 @@ async function refreshRoomPhotos() {
 window.refreshRoomPhotos = refreshRoomPhotos;
 refreshRoomPhotos();
 
+// ルーレット表示
 let avatar = null;
 let avatarMixer = null; 
 let avatarActions = [];
@@ -725,6 +872,38 @@ function isObjectInHierarchy(object, ancestor) {
   return false;
 }
 
+function screenLocalBounds(screenModel) {
+  if (screenModel.userData.interactionBounds) return screenModel.userData.interactionBounds;
+
+  screenModel.updateMatrixWorld(true);
+  const screenWorldInverse = new THREE.Matrix4().copy(screenModel.matrixWorld).invert();
+  const bounds = new THREE.Box3();
+  screenModel.traverse((child) => {
+    if (!child.isMesh || !child.geometry) return;
+
+    child.geometry.computeBoundingBox();
+    if (!child.geometry.boundingBox) return;
+
+    const childBounds = child.geometry.boundingBox.clone();
+    const childToScreen = new THREE.Matrix4().multiplyMatrices(screenWorldInverse, child.matrixWorld);
+    bounds.union(childBounds.applyMatrix4(childToScreen));
+  });
+  screenModel.userData.interactionBounds = bounds;
+  return bounds;
+}
+
+function screenEdgeStep(screenModel, hitPoint) {
+  const bounds = screenLocalBounds(screenModel);
+  const width = bounds.max.x - bounds.min.x;
+  if (width <= 0) return 0;
+
+  const localPoint = screenModel.worldToLocal(hitPoint.clone());
+  const horizontalPosition = (localPoint.x - bounds.min.x) / width;
+  if (horizontalPosition <= 0.04) return -1;
+  if (horizontalPosition >= 0.96) return 1;
+  return 0;
+}
+
 //Screen and roulette board click handling
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
@@ -738,27 +917,30 @@ window.addEventListener("click", (event) => {
 
   raycaster.setFromCamera(mouse, camera);
 
-  const intersects = raycaster.intersectObjects(
-    [screen1, screen2, screen3, screen4, roomRouletteMesh].filter(Boolean),
-    true,
-  );
+  const screenModels = [screen1, screen2, screen3, screen4];
+  const intersects = raycaster.intersectObjects([...screenModels, roomRouletteMesh].filter(Boolean), true);
 
   if (intersects.length === 0) {
     return;
   }
 
-  const hitObject = intersects[0].object;
+  const hit = intersects[0];
+  const hitObject = hit.object;
   if (isObjectInHierarchy(hitObject, roomRouletteMesh)) {
     activateRouletteCamera();
-  } else if (isObjectInHierarchy(hitObject, screen1)) {
-    activateScreen1Camera();
-  } else if (isObjectInHierarchy(hitObject, screen2)) {
-    activateScreen2Camera();
-  } else if (isObjectInHierarchy(hitObject, screen3)) {
-    activateScreen3Camera();
-  } else if (isObjectInHierarchy(hitObject, screen4)) {
-    activateScreen4Camera();
+    return;
   }
+
+  const screenIndex = screenModels.findIndex((screenModel) => isObjectInHierarchy(hitObject, screenModel));
+  if (screenIndex < 0) return;
+
+  const step = screenEdgeStep(screenModels[screenIndex], hit.point);
+  if (step !== 0) {
+    cyclePhotoScreen(photoScreenPanels[screenIndex], step);
+    return;
+  }
+
+  [activateScreen1Camera, activateScreen2Camera, activateScreen3Camera, activateScreen4Camera][screenIndex]();
 });
 
 //collision detection
@@ -810,6 +992,7 @@ window.addEventListener("keyup", (e) => {
 // Animation loop
 function animate() {
   requestAnimationFrame(animate);
+  updatePhotoScreenTransitions(performance.now());
   
   if (avatarMixer) {
     avatarMixer.update(clock.getDelta());
