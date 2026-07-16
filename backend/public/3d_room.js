@@ -69,20 +69,119 @@ loader.load(
 );
 
 // Load Screen GLB Model
-let screen;
-
+let screen1;
 loader.load("/Screen.glb", (gltf) => {
 
-    screen = gltf.scene;
-    screen.rotation.y = THREE.MathUtils.degToRad(90);
-    screen.scale.set(0.7, 0.6, 0.5);
-    screen.position.set(-4.5, 1, 1);
+    screen1 = gltf.scene;
+    screen1.rotation.y = THREE.MathUtils.degToRad(90);
+    screen1.scale.set(0.5, 0.5, 0.5);
+    screen1.position.set(-4.5, 1.3, 1);
 
-    scene.add(screen);
+    scene.add(screen1);
+
+});
+
+let screen2;
+loader.load("/Screen.glb", (gltf) => {
+
+    screen2 = gltf.scene;
+    screen2.rotation.y = THREE.MathUtils.degToRad(90);
+    screen2.scale.set(0.5, 0.5, 0.5);
+    screen2.position.set(-4.5, 1.3, -5);
+
+    scene.add(screen2);
+
+});
+
+let screen3;
+loader.load("/Screen.glb", (gltf) => {
+
+    screen3 = gltf.scene;
+    screen3.rotation.y = THREE.MathUtils.degToRad(270);
+    screen3.scale.set(0.5, 0.5, 0.5);
+    screen3.position.set(5, 1.3, -4);
+
+    scene.add(screen3);
+
+});
+
+let screen4;
+loader.load("/Screen.glb", (gltf) => {
+
+    screen4 = gltf.scene;
+    screen4.rotation.y = THREE.MathUtils.degToRad(180);
+    screen4.scale.set(0.5, 0.5, 0.5);
+    screen4.position.set(0, 0.3, 5.9);
+
+    scene.add(screen4);
 
 });
 
 // ルーレット表示
+// Uploaded photos are stored as data URLs in PortalPhoto and exposed by
+// GET /api/v1/photos. Show the newest photos on the room screens.
+const photoScreenPanels = [
+  { position: [-4.22, 1.45, 1], rotationY: 90 },
+  { position: [-4.22, 1.45, -5], rotationY: 90 },
+  { position: [4.72, 1.45, -4], rotationY: -90 },
+  { position: [0, 0.45, 5.62], rotationY: 180 },
+].map(({ position, rotationY }) => {
+  const material = new THREE.MeshBasicMaterial({ color: 0x111111, side: THREE.DoubleSide });
+  const panel = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.76), material);
+  panel.position.set(...position);
+  panel.rotation.y = THREE.MathUtils.degToRad(rotationY);
+  scene.add(panel);
+  return panel;
+});
+
+let photoScreenLoadId = 0;
+
+function setPhotoScreenImage(panel, imageData) {
+  const loadId = photoScreenLoadId;
+  new THREE.TextureLoader().load(
+    imageData,
+    (texture) => {
+      if (loadId !== photoScreenLoadId) {
+        texture.dispose();
+        return;
+      }
+
+      texture.encoding = THREE.sRGBEncoding;
+      const previousTexture = panel.material.map;
+      panel.material.map = texture;
+      panel.material.color.set(0xffffff);
+      panel.material.needsUpdate = true;
+      if (previousTexture) previousTexture.dispose();
+    },
+    undefined,
+    () => console.warn("Failed to load an uploaded photo for the room screen"),
+  );
+}
+
+async function refreshRoomPhotos() {
+  const loadId = ++photoScreenLoadId;
+  try {
+    const response = await fetch("/api/v1/photos");
+    if (!response.ok) throw new Error(`Photo request failed: ${response.status}`);
+
+    const data = await response.json();
+    const photos = Array.isArray(data.photos) ? data.photos : [];
+    if (photos.length === 0) return;
+
+    photoScreenPanels.forEach((panel, index) => {
+      const photo = photos[index % photos.length];
+      if (photo?.image_data && loadId === photoScreenLoadId) {
+        setPhotoScreenImage(panel, photo.image_data);
+      }
+    });
+  } catch (error) {
+    console.warn("Failed to refresh room photos", error);
+  }
+}
+
+window.refreshRoomPhotos = refreshRoomPhotos;
+refreshRoomPhotos();
+
 let avatar = null;
 let avatarMixer = null; 
 let avatarActions = [];
@@ -417,8 +516,24 @@ window.addEventListener("resize", () => {
 
 const defaultCameraPosition = new THREE.Vector3(0, 2.7, 2);
 const defaultCameraTarget = new THREE.Vector3(0, 1, 0);
-const screenCameraPosition = new THREE.Vector3(-2.5, 1.2, 1.7);
-const screenCameraTarget = new THREE.Vector3(-4.5, 1.5, 1.3);
+const screenCameraViews = {
+  screen1: {
+    position: new THREE.Vector3(-2.5, 1.2, 1.7),
+    target: new THREE.Vector3(-4.5, 1.5, 1.3),
+  },
+  screen2: {
+    position: new THREE.Vector3(-2.5, 1.2, -4.3),
+    target: new THREE.Vector3(-4.5, 1.9, -5),
+  },
+  screen3: {
+    position: new THREE.Vector3(2.7, 1.2, -3.3),
+    target: new THREE.Vector3(5, 1.5, -4),
+  },
+  screen4: {
+    position: new THREE.Vector3(0, 1.2, 4.4),
+    target: new THREE.Vector3(0, 0.8, 5.9),
+  },
+};
 const rouletteCameraPosition = new THREE.Vector3(1.8, 1.3, -6);
 const rouletteCameraTarget = new THREE.Vector3(2.3, 1.4, -7.2);
 
@@ -440,7 +555,7 @@ const movementHintDelay = 1000;
 function updateCameraHint() {
   cameraHint.classList.toggle(
     "is-visible",
-    activeCameraMode === "screen" || activeCameraMode === "roulette"
+    activeCameraMode.startsWith("screen") || activeCameraMode === "roulette"
   );
   movementHint.classList.toggle(
     "is-visible",
@@ -479,6 +594,9 @@ function activateCameraToTarget(position, target, mode) {
   if (!movementEnabled) {
     return;
   }
+  if (activeCameraMode === mode) {
+    return;
+  }
 
   cameraFollowEnabled = false;
   activeCameraMode = mode;
@@ -495,14 +613,55 @@ function activateCameraToTarget(position, target, mode) {
   updateCameraHint();
 }
 
-function activateScreenCamera() {
-  activateCameraToTarget(screenCameraPosition, screenCameraTarget, "screen");
+function activateScreen1Camera() {
+  if (activeCameraMode === "screen1") {
+    return;
+  }
+
+  activateCameraToTarget(screenCameraViews.screen1.position, screenCameraViews.screen1.target, "screen1");
   avatar.position.set(-1.5, 0, 1);
   autoMoveDirection = new THREE.Vector3(-1, 0, 0);
   autoMoveSteps = 70;
 }
 
+function activateScreen2Camera() {
+  if (activeCameraMode === "screen2") {
+    return;
+  }
+
+  activateCameraToTarget(screenCameraViews.screen2.position, screenCameraViews.screen2.target, "screen2");
+  avatar.position.set(-1, 0, -6);
+  autoMoveDirection = new THREE.Vector3(-1, 0, 0);
+  autoMoveSteps = 100;
+}
+
+function activateScreen3Camera() {
+  if (activeCameraMode === "screen3") {
+    return;
+  }
+
+  activateCameraToTarget(screenCameraViews.screen3.position, screenCameraViews.screen3.target, "screen3");
+  avatar.position.set(3, 0, -4.6);
+  autoMoveDirection = new THREE.Vector3(1, 0, 0);
+  autoMoveSteps = 80;
+}
+
+function activateScreen4Camera() {
+  if (activeCameraMode === "screen4") {
+    return;
+  }
+
+  activateCameraToTarget(screenCameraViews.screen4.position, screenCameraViews.screen4.target, "screen4");
+  avatar.position.set(0, 0, 2.8);
+  autoMoveDirection = new THREE.Vector3(0, 0, 1);
+  autoMoveSteps = 80;
+}
+
 function activateRouletteCamera() {
+  if (activeCameraMode === "roulette") {
+    return;
+  }
+
   activateCameraToTarget(rouletteCameraPosition, rouletteCameraTarget, "roulette");
   avatar.position.set(0, 0, -7.2);
   autoMoveDirection = new THREE.Vector3(1, 0, 0);
@@ -514,18 +673,19 @@ function updateCameraLookAt() {
     return;
   }
 
+  const activeCameraView = activeCameraMode === "roulette"
+    ? { position: rouletteCameraPosition, target: rouletteCameraTarget }
+    : screenCameraViews[activeCameraMode];
   const desiredLookAt = cameraFollowEnabled
     ? avatar.position.clone().add(new THREE.Vector3(0, 1.2, 0))
-    : activeCameraMode === "roulette"
-      ? rouletteCameraTarget.clone()
-      : screenCameraTarget.clone();
+    : activeCameraView.target.clone();
 
   if (cameraFollowEnabled) {
     cameraEndPosition.copy(defaultCameraPosition);
     cameraEndLookAt.copy(desiredLookAt);
   } else {
-    cameraEndPosition.copy(activeCameraMode === "roulette" ? rouletteCameraPosition : screenCameraPosition);
-    cameraEndLookAt.copy(activeCameraMode === "roulette" ? rouletteCameraTarget : screenCameraTarget);
+    cameraEndPosition.copy(activeCameraView.position);
+    cameraEndLookAt.copy(activeCameraView.target);
   }
 
   if (cameraTransitionProgress < 1) {
@@ -569,7 +729,7 @@ function isObjectInHierarchy(object, ancestor) {
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 window.addEventListener("click", (event) => {
-  if (!screen && !roomRouletteMesh) {
+  if (![screen1, screen2, screen3, screen4].some(Boolean) && !roomRouletteMesh) {
     return;
   }
 
@@ -578,7 +738,10 @@ window.addEventListener("click", (event) => {
 
   raycaster.setFromCamera(mouse, camera);
 
-  const intersects = raycaster.intersectObjects([screen, roomRouletteMesh].filter(Boolean), true);
+  const intersects = raycaster.intersectObjects(
+    [screen1, screen2, screen3, screen4, roomRouletteMesh].filter(Boolean),
+    true,
+  );
 
   if (intersects.length === 0) {
     return;
@@ -587,8 +750,14 @@ window.addEventListener("click", (event) => {
   const hitObject = intersects[0].object;
   if (isObjectInHierarchy(hitObject, roomRouletteMesh)) {
     activateRouletteCamera();
-  } else if (isObjectInHierarchy(hitObject, screen)) {
-    activateScreenCamera();
+  } else if (isObjectInHierarchy(hitObject, screen1)) {
+    activateScreen1Camera();
+  } else if (isObjectInHierarchy(hitObject, screen2)) {
+    activateScreen2Camera();
+  } else if (isObjectInHierarchy(hitObject, screen3)) {
+    activateScreen3Camera();
+  } else if (isObjectInHierarchy(hitObject, screen4)) {
+    activateScreen4Camera();
   }
 });
 

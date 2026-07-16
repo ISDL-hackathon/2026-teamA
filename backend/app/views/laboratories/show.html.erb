@@ -1330,6 +1330,7 @@
       }
 
       photoInput.value = "";
+      window.refreshRoomPhotos?.();
       photoMessage.textContent = `${newPhotos.length}枚の写真をアップロードしました。`;
       setStatus("写真をアップロードしました");
       switchPhotoView("gallery");
