@@ -7,8 +7,13 @@ module Api
         end
 
         def create
-          result = AlexaQueueService.new.play_next_track(device_id: params[:device_id])
-          RouletteState.update!(result.merge(phase: result[:status] == "success" ? "playing" : "result", updated_by: current_user&.name))
+          result = AlexaQueueService.new.select_next_user
+          RouletteState.update!(result.merge(phase: result[:status] == "selected" ? "result" : "error", updated_by: current_user&.name))
+          render json: result, status: result[:status] == "selected" ? :ok : :bad_request
+        end
+
+        def play_selected_user
+          result = AlexaQueueService.new.play_selected_user(user_id: params[:user_id], device_id: params[:device_id])
           render json: result, status: %w[success no_track].include?(result[:status]) ? :ok : :bad_request
         end
 
@@ -28,6 +33,7 @@ module Api
             :selected_track,
             :status,
             :duration_ms,
+            :roulette_stop_angle,
             roulette_candidates: [:user_id, :name, :week_minutes, :probability]
           ).to_h.deep_symbolize_keys
         end

@@ -7,6 +7,7 @@
     selected_user: nil,
     selected_user_id: nil,
     selected_track: nil,
+    roulette_stop_angle: nil,
     roulette_candidates: [],
     updated_at: nil,
     updated_by: nil

@@ -64,11 +64,9 @@
   .roulette-now strong { display: block; color: #f8fafc; font-size: 16px; }
   .roulette-wheel-wrap { position: relative; width: 220px; height: 220px; margin: 0 auto; }
   .roulette-pointer { position: absolute; z-index: 2; top: -5px; left: 50%; width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-top: 24px solid #f8fafc; transform: translateX(-50%); filter: drop-shadow(0 2px 4px rgba(0,0,0,.45)); }
-  .roulette-wheel { position: absolute; inset: 8px; border: 7px solid #f8fafc; border-radius: 999px; background: conic-gradient(#334155 0 360deg); box-shadow: inset 0 0 0 2px rgba(15,23,42,.92), 0 0 0 2px rgba(15,23,42,.95); transition: transform 3.2s cubic-bezier(.12,.72,.08,1); }
+  .roulette-wheel { position: absolute; inset: 8px; border: 7px solid #f8fafc; border-radius: 999px; background: conic-gradient(#334155 0 360deg); box-shadow: inset 0 0 0 2px rgba(15,23,42,.92), 0 0 0 2px rgba(15,23,42,.95); }
   .roulette-wheel::before { content: ""; position: absolute; z-index: 1; top: 16px; left: 50%; width: 5px; height: 60px; border-radius: 999px; background: rgba(255,255,255,.92); box-shadow: 0 0 10px rgba(255,255,255,.38); transform: translateX(-50%); }
   .roulette-wheel::after { content: ""; position: absolute; inset: 70px; border-radius: 999px; background: rgba(15,23,42,.92); box-shadow: 0 0 0 2px rgba(255,255,255,.34); }
-  .roulette-wheel.is-spinning { animation: roulette-spin .55s linear infinite; transition: none; }
-  @keyframes roulette-spin { to { transform: rotate(360deg); } }
   .roulette-center { position: absolute; z-index: 3; inset: 78px; display: grid; place-items: center; color: #f8fafc; font-size: 12px; font-weight: 700; text-align: center; }
   .roulette-list { display: grid; gap: 6px; margin-top: 10px; max-height: 120px; overflow: hidden; }
   .roulette-member { display: grid; grid-template-columns: 10px 1fr auto; align-items: center; gap: 7px; color: #dbeafe; font-size: 12px; }
@@ -474,6 +472,8 @@
   let activePlaybackButton = null;
   let spotifyPlaybackRequestInFlight = false;
   let rouletteRotation = 0;
+  let rouletteSpinFrame = null;
+  let rouletteSpinLastTime = null;
   let queueRouletteRequestInFlight = false;
   let queueRouletteActive = false;
   let queueRouletteTimer = null;
@@ -630,46 +630,35 @@
       window.updateRoomRoulette({ phase: "spinning", message: "ICカード登録者から当選者を選んでいます。" });
     }
 
-    let deviceId = spotifyDeviceSelect.value;
-    if (!deviceId) {
-      await loadSpotifyDevices();
-      deviceId = spotifyDeviceSelect.value;
-    }
-
-    if (!deviceId) {
-      queueResult.textContent = "Spotify Connectの再生先を選択してください。楽曲検索・登録を開いて再生先を選んでから実行してください。";
-      rouletteNow.innerHTML = `<strong>再生先が未選択</strong>Spotify Connectの再生先を選択してください。`;
-      rouletteCenter.textContent = "再生先なし";
-      queueRouletteActive = false;
-      queueRouletteRequestInFlight = false;
-      updateQueueToggleButtons();
-      setStatus("再生先を選択してください");
-      return;
-    }
-
     startRouletteSpin();
     try {
       const response = await fetch(`${apiBase}/alexa/play_queue`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ device_id: deviceId }),
       });
       const data = await response.json().catch(() => ({}));
       if (!queueRouletteActive) {
         stopRouletteSpin();
-        await pauseQueuePlayback(deviceId);
         return;
       }
       await spinRoulette(data);
       const sharedState = {
         ...data,
-        phase: data.status === "success" ? "playing" : "result",
-        message: data.message || data.selected_track || "選曲しました。"
+        phase: data.status === "selected" ? "result" : "error",
+        selected_track: null,
+        message: data.message || "当選者を選びました。"
       };
       queueResult.textContent = queueResultText(data);
       publishRouletteState(sharedState);
-      setStatus(data.status === "success" ? "選曲した曲を再生しました" : (data.message || "選曲実行に失敗しました"));
-      scheduleNextQueueRoulette(data);
+      setStatus(data.status === "selected" ? "当選者を選びました" : (data.message || "選曲実行に失敗しました"));
+
+      const playback = data.status === "selected" ? await playSelectedUserTrack(data) : data;
+      if (playback) {
+        queueResult.textContent = [queueResultText(data), playbackResultText(playback)].filter(Boolean).join("\n\n");
+        updateNowPlayingDisplay(playback);
+        setStatus(playback.status === "success" ? "当選者の曲を再生しました" : (playback.message || "曲の再生に失敗しました"));
+      }
+      scheduleNextQueueRoulette(playback || data);
     } catch {
       stopRouletteSpin();
       queueResult.textContent = "選曲実行に失敗しました。";
@@ -736,6 +725,32 @@
     } catch {
       setStatus("選曲ルーレットを停止しました");
     }
+  }
+
+  async function playSelectedUserTrack(selection) {
+    let deviceId = spotifyDeviceSelect.value;
+    if (!deviceId) {
+      await loadSpotifyDevices();
+      deviceId = spotifyDeviceSelect.value;
+    }
+
+    if (!deviceId) {
+      return {
+        status: "error",
+        message: "Spotify Connectの再生先を選択してください。楽曲検索・登録を開いて再生先を選んでから実行してください。",
+        code: "SPOTIFY_DEVICE_REQUIRED"
+      };
+    }
+
+    const response = await fetch(`${apiBase}/alexa/play_selected_user`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: selection.selected_user_id, device_id: deviceId }),
+    });
+    return response.json().catch(() => ({
+      status: "error",
+      message: "当選者の曲を再生できませんでした。",
+    }));
   }
 
   async function publishRouletteState(payload) {
@@ -1019,31 +1034,69 @@
   }
 
   function queueResultText(data) {
-    if (data.status === "success") {
+    if (data.status === "selected") {
       return [
-        "選曲して再生しました。",
+        "ルーレットで当選者を選びました。",
         `ユーザー: ${data.selected_user || "-"}`,
-        `曲: ${data.selected_track || "-"}`,
         `当選確率: ${Math.round((Number(data.probability) || 0) * 1000) / 10}%`,
-        data.excluded_user_name ? `今回除外: ${data.excluded_user_name}` : null,
       ].filter(Boolean).join("\n");
     }
 
     return [
-      data.message || "選曲実行に失敗しました。",
+      data.message || "抽選に失敗しました。",
       data.selected_user ? `選ばれたユーザー: ${data.selected_user}` : null,
-      data.selected_track ? `選ばれた曲: ${data.selected_track}` : null,
       data.code ? `code: ${data.code}` : null,
     ].filter(Boolean).join("\n");
   }
 
+  function playbackResultText(data) {
+    if (data.status === "success") {
+      return [
+        "当選者の曲を再生しました。",
+        `曲: ${data.selected_track || "-"}`,
+      ].filter(Boolean).join("\n");
+    }
+
+    return [
+      data.message || "当選者の曲を再生できませんでした。",
+      data.selected_track ? `曲: ${data.selected_track}` : null,
+      data.code ? `code: ${data.code}` : null,
+    ].filter(Boolean).join("\n");
+  }
+
+  function updateNowPlayingDisplay(playback) {
+    if (playback.status !== "success") return;
+
+    rouletteNow.innerHTML = `<strong>${escapeHtml(playback.selected_user || "-")}</strong>${escapeHtml(playback.selected_track || "-")} を再生中`;
+    if (window.updateRoomNowPlaying) {
+      window.updateRoomNowPlaying({
+        selected_user: playback.selected_user,
+        selected_user_id: playback.selected_user_id,
+        selected_track: playback.selected_track,
+      });
+    }
+  }
+
   function startRouletteSpin() {
-    rouletteWheel.classList.add("is-spinning");
+    if (rouletteSpinFrame) return;
+
+    rouletteSpinLastTime = performance.now();
+    const spin = (now) => {
+      const delta = Math.min(now - rouletteSpinLastTime, 64);
+      rouletteSpinLastTime = now;
+      rouletteRotation += delta * 0.72;
+      rouletteWheel.style.transform = `rotate(${rouletteRotation}deg)`;
+      rouletteSpinFrame = requestAnimationFrame(spin);
+    };
+    rouletteSpinFrame = requestAnimationFrame(spin);
   }
 
   function stopRouletteSpin() {
-    rouletteWheel.classList.remove("is-spinning");
-    void rouletteWheel.offsetWidth;
+    if (!rouletteSpinFrame) return;
+
+    cancelAnimationFrame(rouletteSpinFrame);
+    rouletteSpinFrame = null;
+    rouletteSpinLastTime = null;
   }
 
   async function spinRoulette(data) {
@@ -1063,22 +1116,33 @@
     const targetIndex = winnerIndex >= 0 ? winnerIndex : 0;
     const ranges = rouletteRanges(candidates);
     const targetRange = ranges[targetIndex] || { start: 0, end: 360 };
-    const targetPadding = Math.min(6, Math.max(1, (targetRange.end - targetRange.start) * 0.18));
-    const targetStart = targetRange.start + targetPadding;
-    const targetEnd = targetRange.end - targetPadding;
-    const targetAngle = targetStart < targetEnd
-      ? targetStart + Math.random() * (targetEnd - targetStart)
+    const targetAngle = Number.isFinite(Number(data.roulette_stop_angle))
+      ? Number(data.roulette_stop_angle)
       : (targetRange.start + targetRange.end) / 2;
-    const currentBase = rouletteRotation % 360;
-    const fullTurns = 2 * 360;
-    const destination = rouletteRotation + fullTurns + (360 - targetAngle) - currentBase;
+    const currentBase = positiveModulo(rouletteRotation, 360);
+    const targetRotation = positiveModulo(360 - targetAngle, 360);
+    const deltaToTarget = positiveModulo(targetRotation - currentBase, 360);
+    const destination = rouletteRotation + deltaToTarget;
     rouletteRotation = destination;
-    rouletteWheel.style.transition = "transform 2.4s cubic-bezier(.12,.72,.08,1)";
-    rouletteWheel.style.transform = `rotate(${destination}deg)`;
-    await wait(2400);
+    rouletteNow.innerHTML = `<strong>抽選中</strong>当選位置までゆっくり停止します。`;
+    rouletteCenter.textContent = "抽選中";
+    if (window.updateRoomRoulette) {
+      window.updateRoomRoulette({
+        ...data,
+        phase: "settling",
+        selected_user: null,
+        selected_track: null,
+        message: "当選位置までゆっくり停止します。"
+      });
+    }
 
-    if (data.status === "success") {
-      rouletteNow.innerHTML = `<strong>${escapeHtml(data.selected_user || "-")}</strong>${escapeHtml(data.selected_track || "-")} を再生中`;
+    rouletteWheel.style.transition = "transform 3.2s cubic-bezier(.05,.72,.12,1)";
+    rouletteWheel.style.transform = `rotate(${destination}deg)`;
+    await wait(3200);
+    rouletteWheel.style.transition = "";
+
+    if (data.status === "selected") {
+      rouletteNow.innerHTML = `<strong>${escapeHtml(data.selected_user || "-")}</strong>当選しました。`;
       rouletteCenter.textContent = data.selected_user || "当選";
     } else if (data.status === "no_track") {
       rouletteNow.innerHTML = `<strong>${escapeHtml(data.selected_user || "-")}</strong>お気に入りされている登録がありません。楽曲のお気に入り登録お願いします。`;
@@ -1091,14 +1155,19 @@
     if (window.updateRoomRoulette) {
       window.updateRoomRoulette({
         ...data,
-        phase: data.status === "success" ? "playing" : "result",
-        message: data.message || data.selected_track || "選曲しました。"
+        phase: data.status === "selected" ? "result" : "error",
+        selected_track: null,
+        message: data.message || "当選者を選びました。"
       });
     }
   }
 
   function wait(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  function positiveModulo(value, divisor) {
+    return ((value % divisor) + divisor) % divisor;
   }
 
   function renderRoulette(candidates, selectedUserId = null) {

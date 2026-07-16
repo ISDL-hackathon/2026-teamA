@@ -36,6 +36,7 @@ Rails.application.routes.draw do
         get "queue_state", to: "queues#show"
         post "queue_state", to: "queues#update_state"
         post "play_queue", to: "queues#create"
+        post "play_selected_user", to: "queues#play_selected_user"
       end
     end
   end

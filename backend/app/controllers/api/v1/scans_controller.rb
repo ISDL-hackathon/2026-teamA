@@ -11,8 +11,7 @@ module Api
         return render_error("User not found for this card", "CARD_NOT_FOUND", :not_found) unless card
 
         log = RoomAccessService.new(card.user).record!
-        playback_result = log.in? ? AlexaQueueService.new.play_next_track : nil
-        update_roulette_state!(playback_result, card.user) if playback_result.present?
+        playback_result = log.in? ? select_and_play_next_track(card.user) : nil
 
         render json: {
           status: "success",
@@ -28,10 +27,20 @@ module Api
 
       private
 
-      def update_roulette_state!(playback_result, user)
+      def select_and_play_next_track(user)
+        service = AlexaQueueService.new
+        selection_result = service.select_next_user
+        update_roulette_state!(selection_result, user)
+        return selection_result unless selection_result[:status] == "selected"
+
+        service.play_selected_user(user_id: selection_result[:selected_user_id])
+      end
+
+      def update_roulette_state!(selection_result, user)
         RouletteState.update!(
-          playback_result.merge(
-            phase: playback_result[:status] == "success" ? "playing" : "result",
+          selection_result.merge(
+            phase: selection_result[:status] == "selected" ? "result" : "error",
+            selected_track: nil,
             updated_by: user.name
           )
         )

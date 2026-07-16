@@ -146,7 +146,8 @@ function drawRoomRoulette() {
 
   ctx.fillStyle = "#f8fafc";
   ctx.font = "700 34px sans-serif";
-  ctx.fillText(roomRouletteState.selected_user || "待機中", 54, 128);
+  const showSelectedUser = roomRouletteState.phase !== "settling";
+  ctx.fillText(showSelectedUser ? (roomRouletteState.selected_user || "待機中") : "抽選中", 54, 128);
 
   ctx.fillStyle = "#bae6fd";
   ctx.font = "28px sans-serif";
@@ -291,15 +292,18 @@ function roomRouletteStopAngle(state) {
 
   const ranges = roomRouletteRanges(candidates);
   const targetRange = ranges[winnerIndex];
-  const padding = Math.min(0.12, Math.max(0.02, (targetRange.end - targetRange.start) * 0.18));
-  const targetStart = targetRange.start + padding;
-  const targetEnd = targetRange.end - padding;
-  const targetAngle = targetStart < targetEnd
-    ? targetStart + Math.random() * (targetEnd - targetStart)
+  const targetAngle = Number.isFinite(Number(state.roulette_stop_angle))
+    ? THREE.MathUtils.degToRad(Number(state.roulette_stop_angle))
     : (targetRange.start + targetRange.end) / 2;
-  const currentBase = roomRouletteAngle % (Math.PI * 2);
+  const currentBase = positiveModulo(roomRouletteAngle, Math.PI * 2);
+  const targetRotation = positiveModulo(-targetAngle, Math.PI * 2);
+  const deltaToTarget = positiveModulo(targetRotation - currentBase, Math.PI * 2);
 
-  return roomRouletteAngle - targetAngle - currentBase;
+  return roomRouletteAngle + deltaToTarget;
+}
+
+function positiveModulo(value, divisor) {
+  return ((value % divisor) + divisor) % divisor;
 }
 
 window.updateRoomRoulette = (state) => {
@@ -316,15 +320,23 @@ window.updateRoomRoulette = (state) => {
     ...incomingState,
     selected_track: selectedTrack,
   };
-  if (roomRouletteState.phase === "playing" || roomRouletteState.phase === "result") {
-    const stopAngle = roomRouletteStopAngle(roomRouletteState);
-    if (stopAngle !== null) {
-      roomRouletteAngle = stopAngle;
-      roomRouletteTargetAngle = null;
-    }
+  if (roomRouletteState.phase === "settling") {
+    roomRouletteTargetAngle = roomRouletteStopAngle(roomRouletteState);
   } else if (roomRouletteState.phase === "spinning") {
     roomRouletteTargetAngle = null;
+  } else if (roomRouletteState.phase === "result" || roomRouletteState.phase === "playing" || roomRouletteState.phase === "error" || roomRouletteState.phase === "stopped") {
+    roomRouletteTargetAngle = null;
   }
+  drawRoomRoulette();
+};
+
+window.updateRoomNowPlaying = (trackState) => {
+  roomRouletteState = {
+    ...roomRouletteState,
+    ...trackState,
+    phase: "playing",
+  };
+  roomRouletteTargetAngle = null;
   drawRoomRoulette();
 };
 
@@ -741,7 +753,7 @@ function animate() {
     roomRouletteAngle += 0.12;
     drawRoomRoulette();
   } else if (roomRouletteTargetAngle !== null) {
-    roomRouletteAngle += (roomRouletteTargetAngle - roomRouletteAngle) * 0.08;
+    roomRouletteAngle += (roomRouletteTargetAngle - roomRouletteAngle) * 0.045;
     if (Math.abs(roomRouletteTargetAngle - roomRouletteAngle) < 0.002) {
       roomRouletteAngle = roomRouletteTargetAngle;
       roomRouletteTargetAngle = null;
