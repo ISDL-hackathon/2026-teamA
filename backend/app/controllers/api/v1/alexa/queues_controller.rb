@@ -8,7 +8,6 @@ module Api
 
         def create
           result = AlexaQueueService.new.select_next_user
-          RouletteState.update!(result.merge(phase: result[:status] == "selected" ? "result" : "error", updated_by: current_user&.name))
           render json: result, status: result[:status] == "selected" ? :ok : :bad_request
         end
 

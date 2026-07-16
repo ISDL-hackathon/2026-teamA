@@ -14,12 +14,12 @@
   }.freeze
 
   def self.current
-    Rails.cache.read(CACHE_KEY) || DEFAULT_STATE.merge(updated_at: Time.current.iso8601)
+    Rails.cache.read(CACHE_KEY) || DEFAULT_STATE
   end
 
   def self.update!(attributes)
     state = DEFAULT_STATE.merge(current).merge(attributes.compact)
-    state[:updated_at] = Time.current.iso8601
+    state[:updated_at] = Time.current.iso8601(6)
     Rails.cache.write(CACHE_KEY, state)
     state
   end

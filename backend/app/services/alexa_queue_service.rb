@@ -2,7 +2,8 @@ class AlexaQueueService
   MIN_WEIGHT_MINUTES = 1.0
 
   def select_next_user
-    candidates = candidate_users
+    excluded_user = temporarily_excluded_user
+    candidates = candidate_users(excluded_user)
     return error("No IC card registered users", "NO_CARD_REGISTERED_USERS") if candidates.empty?
 
     weights = selection_weights(candidates)
@@ -16,6 +17,8 @@ class AlexaQueueService
       selected_user_id: selected_user.id,
       selected_track: nil,
       probability: probability_for(selected_user, weights),
+      excluded_user_id: excluded_user&.id,
+      excluded_user_name: excluded_user&.name,
       roulette_candidates: roulette_candidates(candidates, weights),
       roulette_stop_angle: roulette[:stop_angle],
       timestamp: Time.current.iso8601
@@ -30,7 +33,8 @@ class AlexaQueueService
   end
 
   def play_next_track(device_id: nil)
-    candidates = candidate_users
+    excluded_user = temporarily_excluded_user
+    candidates = candidate_users(excluded_user)
     return error("No IC card registered users", "NO_CARD_REGISTERED_USERS") if candidates.empty?
 
     weights = selection_weights(candidates)
@@ -42,22 +46,23 @@ class AlexaQueueService
       candidates: candidates,
       weights: weights,
       roulette_stop_angle: roulette_stop_angle,
+      excluded_user: excluded_user,
       device_id: device_id
     )
   end
 
   private
 
-  def play_user_track(selected_user, candidates: nil, weights: nil, roulette_stop_angle: nil, device_id: nil)
+  def play_user_track(selected_user, candidates: nil, weights: nil, roulette_stop_angle: nil, excluded_user: nil, device_id: nil)
     track = selected_user.spotify_account&.spotify_tracks&.sample
     if track.blank?
-      return no_track_result(selected_user, candidates, weights, roulette_stop_angle)
+      return no_track_result(selected_user, candidates, weights, roulette_stop_angle, excluded_user)
     end
 
     track_uri = "spotify:track:#{track.spotify_track_id}"
 
     playback = SpotifyPlayerService.new.play_track!(track_uri, device_id: device_id)
-    return playback_error(playback, selected_user, track, track_uri, candidates, weights, roulette_stop_angle) unless playback[:status] == "success"
+    return playback_error(playback, selected_user, track, track_uri, candidates, weights, roulette_stop_angle, excluded_user) unless playback[:status] == "success"
 
     SpotifyPlayEvent.create!(user: selected_user, spotify_track: track, selected_at: Time.current)
 
@@ -70,17 +75,30 @@ class AlexaQueueService
       duration_ms: track.duration_ms,
       track_uri: track_uri,
       probability: weights.present? ? probability_for(selected_user, weights) : nil,
+      excluded_user_id: excluded_user&.id,
+      excluded_user_name: excluded_user&.name,
       roulette_candidates: candidates.present? && weights.present? ? roulette_candidates(candidates, weights) : [],
       roulette_stop_angle: roulette_stop_angle,
       timestamp: Time.current.iso8601
     }
   end
 
-  def candidate_users
-    User.includes(:room_access_logs, :felica_cards, spotify_account: :spotify_tracks)
+  def candidate_users(excluded_user = nil)
+    scope = User.includes(:room_access_logs, :felica_cards, spotify_account: :spotify_tracks)
         .joins(:felica_cards)
         .distinct
-        .to_a
+    scope = scope.where.not(id: excluded_user.id) if excluded_user.present?
+    scope.to_a
+  end
+
+  def temporarily_excluded_user
+    recent_events = SpotifyPlayEvent.includes(:user).order(selected_at: :desc).limit(3).to_a
+    return nil unless recent_events.size == 3
+
+    user_ids = recent_events.map(&:user_id).uniq
+    return nil unless user_ids.size == 1
+
+    recent_events.first.user
   end
 
   def selection_weights(users)
@@ -140,7 +158,7 @@ class AlexaQueueService
     end
   end
 
-  def no_track_result(selected_user, candidates, weights, roulette_stop_angle)
+  def no_track_result(selected_user, candidates, weights, roulette_stop_angle, excluded_user)
     {
       status: "no_track",
       message: "お気に入りされている登録がありません。楽曲のお気に入り登録お願いします。",
@@ -151,13 +169,15 @@ class AlexaQueueService
       duration_ms: nil,
       track_uri: nil,
       probability: weights.present? ? probability_for(selected_user, weights) : nil,
+      excluded_user_id: excluded_user&.id,
+      excluded_user_name: excluded_user&.name,
       roulette_candidates: candidates.present? && weights.present? ? roulette_candidates(candidates, weights) : [],
       roulette_stop_angle: roulette_stop_angle,
       timestamp: Time.current.iso8601
     }
   end
 
-  def playback_error(playback, selected_user, track, track_uri, candidates, weights, roulette_stop_angle)
+  def playback_error(playback, selected_user, track, track_uri, candidates, weights, roulette_stop_angle, excluded_user)
     playback.merge(
       selected_user: selected_user.name,
       selected_user_id: selected_user.id,
@@ -166,6 +186,8 @@ class AlexaQueueService
       duration_ms: track.duration_ms,
       track_uri: track_uri,
       probability: weights.present? ? probability_for(selected_user, weights) : nil,
+      excluded_user_id: excluded_user&.id,
+      excluded_user_name: excluded_user&.name,
       roulette_candidates: candidates.present? && weights.present? ? roulette_candidates(candidates, weights) : [],
       roulette_stop_angle: roulette_stop_angle,
       timestamp: Time.current.iso8601
