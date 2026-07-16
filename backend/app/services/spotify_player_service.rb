@@ -36,22 +36,15 @@ class SpotifyPlayerService
     target_device_id = device_id.presence || default_device_id
     return error("Select a Spotify Connect device before playing music.", "SPOTIFY_DEVICE_ID_REQUIRED") if target_device_id.blank?
 
-    transfer = transfer_playback!(token, target_device_id)
-    return transfer unless transfer[:status] == "success"
+    response = play_request(token, track_uri, target_device_id)
+    return success if spotify_success?(response)
 
-    query = {}
-    query[:device_id] = target_device_id
+    if retry_playback_after_transfer?(response)
+      transfer = transfer_playback!(token, target_device_id)
+      return transfer unless transfer[:status] == "success"
 
-    response = HTTParty.put(
-      PLAYER_URL,
-      headers: {
-        "Authorization" => "Bearer #{token}",
-        "Content-Type" => "application/json"
-      },
-      query: query,
-      body: { uris: [track_uri] }.to_json
-    )
-
+      response = play_request(token, track_uri, target_device_id)
+    end
     return success if spotify_success?(response)
 
     Rails.logger.warn("[spotify-player] playback failed: #{response.code} #{response.body}")
@@ -157,16 +150,54 @@ class SpotifyPlayerService
     error(playback_error_message(response), "SPOTIFY_TRANSFER_FAILED", response.code)
   end
 
+  def play_request(token, track_uri, target_device_id)
+    HTTParty.put(
+      PLAYER_URL,
+      headers: {
+        "Authorization" => "Bearer #{token}",
+        "Content-Type" => "application/json"
+      },
+      query: { device_id: target_device_id },
+      body: { uris: [track_uri] }.to_json
+    )
+  end
+
+  def retry_playback_after_transfer?(response)
+    return true if response.code == 404
+
+    reason = spotify_error(response)["reason"]
+    %w[NO_ACTIVE_DEVICE DEVICE_NOT_FOUND].include?(reason)
+  end
+
   def playback_error_message(response)
+    error_detail = spotify_error(response)
+    spotify_message = error_detail["message"].presence
+    spotify_reason = error_detail["reason"].presence
+
     case response.code
     when 401
-      "Spotify token is invalid or expired. Set SPOTIFY_REFRESH_TOKEN for the Spotify account you want to control."
+      "Spotify連携が期限切れ、または無効です。Spotifyを連携し直してください。"
     when 403
-      "Spotify playback is forbidden. The account must be Premium and authorized with user-modify-playback-state."
+      spotify_forbidden_message(response)
     when 404
-      "Spotify device was not found. Start Spotify on the Alexa device and check SPOTIFY_DEVICE_ID."
+      "Spotifyの再生先が見つかりません。AlexaやPCなどのSpotify Connect再生先を起動してから、再生先を更新してください。"
     else
-      "Spotify playback failed"
+      return "Spotifyの再生に失敗しました。#{spotify_message}#{spotify_reason ? " (#{spotify_reason})" : ""}" if spotify_message
+
+      "Spotifyの再生に失敗しました。"
+    end
+  end
+
+  def spotify_forbidden_message(response)
+    reason = spotify_error(response)["reason"]
+
+    case reason
+    when "PREMIUM_REQUIRED"
+      "Spotify再生にはPremiumアカウントが必要です。PremiumのSpotifyアカウントで連携し直してください。"
+    when "PLAYER_COMMAND_FAILED", "RESTRICTION_VIOLATED"
+      "Spotify側で再生操作が拒否されました。選択した再生先がSpotify Connectで操作可能か確認してください。"
+    else
+      "Spotify再生が許可されていません。Premiumアカウントで、Spotifyを連携し直してください。"
     end
   end
 

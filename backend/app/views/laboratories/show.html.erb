@@ -32,6 +32,7 @@
   .music-section-title { margin: 22px 0 10px; color: #bae6fd; font-size: 15px; font-weight: 700; }
   .list-panel { display: grid; gap: 8px; }
   .track-row { display: grid; grid-template-columns: 52px 1fr auto auto; align-items: center; gap: 12px; padding: 10px; border-radius: 8px; background: rgba(255,255,255,.04); }
+  .track-row.no-playback { grid-template-columns: 52px 1fr auto; }
   .track-row:hover { background: rgba(255,255,255,.07); }
   .track-row img { width: 44px; height: 44px; border-radius: 4px; object-fit: cover; background: #0f141a; }
   .track-row div { min-width: 0; }
@@ -127,10 +128,12 @@
       <span>滞在</span>
       滞在ログ
     </button>
-    <button class="portal-action btn btn-outline justify-start" type="button" data-open-queue>
-      <span>選曲</span>
-      選曲実行（ルーレット開始）
-    </button>
+    <% if @spotify_connected %>
+      <button class="portal-action btn btn-outline justify-start" type="button" data-open-queue>
+        <span>選曲</span>
+        選曲実行（ルーレット開始）
+      </button>
+    <% end %>
   </nav>
 
   <aside class="roulette-display" aria-live="polite">
@@ -168,12 +171,14 @@
       <p class="muted">Alexaへ再生するには「Spotifyを連携」からryouアカウントで認可してください。</p>
     <% end %>
 
-    <div class="inline-form" style="margin-bottom: 14px;">
-      <select id="spotify-device-select" class="input input-bordered" aria-label="再生先">
-        <option value="">再生先を読み込み中...</option>
-      </select>
-      <button id="spotify-device-refresh-button" type="button">再生先更新</button>
-    </div>
+    <% if @spotify_connected %>
+      <div class="inline-form" style="margin-bottom: 14px;">
+        <select id="spotify-device-select" class="input input-bordered" aria-label="再生先">
+          <option value="">再生先を読み込み中...</option>
+        </select>
+        <button id="spotify-device-refresh-button" type="button">再生先更新</button>
+      </div>
+    <% end %>
 
     <div class="inline-form">
       <input id="music-search-input" type="search" placeholder="曲名またはアーティスト名" autocomplete="off">
@@ -192,7 +197,7 @@
       <div class="list-panel" id="favorite-tracks">
         <% if @favorite_tracks.any? %>
           <% @favorite_tracks.each do |track| %>
-            <article class="track-row" data-favorite-track-id="<%= track.spotify_track_id %>">
+            <article class="track-row <%= "no-playback" unless @spotify_connected %>" data-favorite-track-id="<%= track.spotify_track_id %>">
               <% if track.image_url.present? %>
                 <img src="<%= track.image_url %>" alt="">
               <% else %>
@@ -202,7 +207,9 @@
                 <strong class="is-added"><%= track.track_name %></strong>
                 <span><span class="track-kind"></span>楽曲・<%= track.artist_name %></span>
               </div>
-              <%= tag.button "", class: "track-button icon-play", type: "button", data: { spotify_track_id: track.spotify_track_id }, aria: { label: "再生" } %>
+              <% if @spotify_connected %>
+                <%= tag.button "", class: "track-button icon-play", type: "button", data: { spotify_track_id: track.spotify_track_id }, aria: { label: "再生" } %>
+              <% end %>
               <button class="track-button icon-remove" type="button" data-remove-track="<%= track.id %>" data-remove-spotify-track-id="<%= track.spotify_track_id %>" aria-label="お気に入りから削除"></button>
             </article>
           <% end %>
@@ -420,6 +427,7 @@
 <script src="/3d_room.js"></script>
 <script>
   const apiBase = "/api/v1";
+  const spotifyConnected = <%= @spotify_connected ? "true" : "false" %>;
   const musicPanel = document.getElementById("music-panel");
   const cardPanel = document.getElementById("card-panel");
   const stayPanel = document.getElementById("stay-panel");
@@ -512,7 +520,7 @@
     stayPanel.classList.remove("is-open");
     setStatus("<%= j current_user.name %>");
   });
-  document.querySelector("[data-open-queue]").addEventListener("click", () => {
+  document.querySelector("[data-open-queue]")?.addEventListener("click", () => {
     musicPanel.classList.remove("is-open");
     closeCardModal();
     stayPanel.classList.remove("is-open");
@@ -520,7 +528,7 @@
     queuePanel.classList.remove("is-open");
     toggleQueueRoulette();
   });
-  document.querySelector("[data-close-queue]").addEventListener("click", () => {
+  document.querySelector("[data-close-queue]")?.addEventListener("click", () => {
     queuePanel.classList.remove("is-open");
     setStatus("<%= j current_user.name %>");
   });
@@ -557,8 +565,8 @@
   sortStayRows("week");
   switchStayView("chart");
   renderCalendarMonth();
-  spotifyDeviceRefreshButton.addEventListener("click", loadSpotifyDevices);
-  loadSpotifyDevices();
+  spotifyDeviceRefreshButton?.addEventListener("click", loadSpotifyDevices);
+  if (spotifyConnected) loadSpotifyDevices();
   document.getElementById("music-search-button").addEventListener("click", searchTracks);
   document.getElementById("music-search-input").addEventListener("keydown", (event) => {
     if (event.key === "Enter") searchTracks();
@@ -569,6 +577,8 @@
   setInterval(fetchSharedRouletteState, 3000);
 
   async function loadSpotifyDevices() {
+    if (!spotifyDeviceSelect) return;
+
     spotifyDeviceSelect.innerHTML = `<option value="">再生先を取得中...</option>`;
     const response = await fetch(`${apiBase}/spotify/devices`);
     const data = await response.json().catch(() => ({}));
@@ -607,7 +617,7 @@
     }
   });
 
-  document.getElementById("queue-play-button").addEventListener("click", toggleQueueRoulette);
+  document.getElementById("queue-play-button")?.addEventListener("click", toggleQueueRoulette);
 
   function toggleQueueRoulette() {
     if (queueRouletteActive || queueRouletteRequestInFlight) {
@@ -642,6 +652,23 @@
       roulette_stop_angle: null,
       message: "ICカード登録者から当選者を選んでいます。"
     });
+
+    let deviceId = spotifyDeviceSelect?.value;
+    if (!deviceId) {
+      await loadSpotifyDevices();
+      deviceId = spotifyDeviceSelect?.value;
+    }
+
+    if (!deviceId) {
+      queueResult.textContent = "Spotify Connectの再生先を選択してください。楽曲検索・登録を開いて再生先を選んでから実行してください。";
+      rouletteNow.innerHTML = `<strong>再生先が未選択</strong>Spotify Connectの再生先を選択してください。`;
+      rouletteCenter.textContent = "再生先なし";
+      queueRouletteActive = false;
+      queueRouletteRequestInFlight = false;
+      updateQueueToggleButtons();
+      setStatus("再生先を選択してください");
+      return;
+    }
 
     startRouletteSpin();
     try {
@@ -731,7 +758,7 @@
       selected_track: null
     });
 
-    const deviceId = spotifyDeviceSelect.value;
+    const deviceId = spotifyDeviceSelect?.value;
     if (!deviceId) return;
 
     await pauseQueuePlayback(deviceId);
@@ -872,7 +899,7 @@
     }
 
     container.innerHTML = data.results.map((track) => `
-      <article class="track-row" data-search-track="${encodeURIComponent(JSON.stringify(track))}">
+      <article class="track-row ${spotifyConnected ? "" : "no-playback"}" data-search-track="${encodeURIComponent(JSON.stringify(track))}">
         ${track.image_url ? `<img src="${escapeHtml(track.image_url)}" alt="">` : "<img alt=\"\">"}
         <div>
           <strong class="${favoriteTrackIds.has(track.spotify_track_id) ? "is-added" : ""}">${escapeHtml(track.track_name)}</strong>
@@ -923,7 +950,7 @@
     });
 
     container.innerHTML = data.tracks.map((track) => `
-      <article class="track-row" data-favorite-track-id="${track.spotify_track_id}">
+      <article class="track-row ${spotifyConnected ? "" : "no-playback"}" data-favorite-track-id="${track.spotify_track_id}">
         ${track.image_url ? `<img src="${escapeHtml(track.image_url)}" alt="">` : "<img alt=\"\">"}
         <div>
           <strong class="is-added">${escapeHtml(track.track_name)}</strong>
@@ -983,10 +1010,14 @@
   }
 
   function previewButtonHtml(track) {
+    if (!spotifyConnected) return "";
+
     return `<button class="track-button icon-play" type="button" data-spotify-track-id="${escapeHtml(track.spotify_track_id)}" aria-label="再生"></button>`;
   }
 
   function bindPreviewButtons(scope = document) {
+    if (!spotifyConnected) return;
+
     scope.querySelectorAll("[data-spotify-track-id]").forEach((button) => {
       if (button.dataset.playbackBound === "true") return;
       button.dataset.playbackBound = "true";
@@ -995,11 +1026,12 @@
   }
 
   async function toggleSpotifyPlayback(button) {
+    if (!spotifyConnected) return;
     if (spotifyPlaybackRequestInFlight) return;
 
     const spotifyTrackId = button.dataset.spotifyTrackId;
     if (!spotifyTrackId) return;
-    const deviceId = spotifyDeviceSelect.value;
+    const deviceId = spotifyDeviceSelect?.value;
     if (!deviceId) {
       setStatus("再生先を選択してください");
       return;
@@ -1048,6 +1080,7 @@
         playingSpotifyTrackId = spotifyTrackId;
         activePlaybackButton = button;
         button.classList.remove("icon-play");
+        button.classList.add("icon-pause");
         button.setAttribute("aria-label", "停止");
         setStatus("再生中");
       } else if (data.code === "SPOTIFY_PLAYER_TOKEN_REQUIRED") {
