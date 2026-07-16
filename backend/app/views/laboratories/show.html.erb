@@ -478,6 +478,7 @@
   let queueRouletteActive = false;
   let queueRouletteTimer = null;
   let lastRouletteStateAt = null;
+  let sharedRoulettePollInFlight = false;
   const rouletteColors = ["#38bdf8", "#22c55e", "#facc15", "#f472b6", "#a78bfa", "#fb7185", "#2dd4bf", "#f97316"];
 
   document.querySelector("[data-open-music]").addEventListener("click", () => {
@@ -564,6 +565,8 @@
   });
   bindFavoriteRemoveButtons();
   bindPreviewButtons();
+  fetchSharedRouletteState();
+  setInterval(fetchSharedRouletteState, 3000);
 
   async function loadSpotifyDevices() {
     spotifyDeviceSelect.innerHTML = `<option value="">再生先を取得中...</option>`;
@@ -629,6 +632,16 @@
     if (window.updateRoomRoulette) {
       window.updateRoomRoulette({ phase: "spinning", message: "ICカード登録者から当選者を選んでいます。" });
     }
+    publishRouletteState({
+      phase: "spinning",
+      status: "spinning",
+      selected_user: null,
+      selected_user_id: null,
+      selected_track: null,
+      roulette_candidates: [],
+      roulette_stop_angle: null,
+      message: "ICカード登録者から当選者を選んでいます。"
+    });
 
     startRouletteSpin();
     try {
@@ -641,6 +654,13 @@
         stopRouletteSpin();
         return;
       }
+      publishRouletteState({
+        ...data,
+        phase: data.status === "selected" ? "settling" : "error",
+        selected_user: data.status === "selected" ? null : data.selected_user,
+        selected_track: null,
+        message: data.status === "selected" ? "当選位置までゆっくり停止します。" : (data.message || "選曲実行に失敗しました。")
+      });
       await spinRoulette(data);
       const sharedState = {
         ...data,
@@ -656,6 +676,14 @@
       if (playback) {
         queueResult.textContent = [queueResultText(data), playbackResultText(playback)].filter(Boolean).join("\n\n");
         updateNowPlayingDisplay(playback);
+        publishRouletteState({
+          ...data,
+          ...playback,
+          phase: playback.status === "success" ? "playing" : (playback.status === "no_track" ? "result" : "error"),
+          roulette_candidates: data.roulette_candidates || [],
+          roulette_stop_angle: data.roulette_stop_angle,
+          message: playback.status === "success" ? "当選者の曲を再生中です。" : (playback.message || "当選者の曲を再生できませんでした。")
+        });
         setStatus(playback.status === "success" ? "当選者の曲を再生しました" : (playback.message || "曲の再生に失敗しました"));
       }
       scheduleNextQueueRoulette(playback || data);
@@ -696,6 +724,12 @@
     rouletteNow.innerHTML = `<strong>選曲停止中</strong>開始を押すとルーレットを再開します。`;
     rouletteCenter.textContent = "停止";
     setStatus("選曲ルーレットを停止しました");
+    publishRouletteState({
+      phase: "stopped",
+      status: "stopped",
+      message: "選曲ルーレットを停止しました。",
+      selected_track: null
+    });
 
     const deviceId = spotifyDeviceSelect.value;
     if (!deviceId) return;
@@ -768,8 +802,26 @@
     }
   }
 
+  async function fetchSharedRouletteState() {
+    if (sharedRoulettePollInFlight) return;
+
+    sharedRoulettePollInFlight = true;
+    try {
+      const response = await fetch(`${apiBase}/alexa/queue_state`, {
+        headers: { "Accept": "application/json" },
+      });
+      const state = await response.json().catch(() => ({}));
+      applySharedRouletteState(state);
+    } catch {
+      // Shared roulette sync is best-effort; local controls remain usable.
+    } finally {
+      sharedRoulettePollInFlight = false;
+    }
+  }
+
   function applySharedRouletteState(state) {
     if (!state || !state.updated_at || state.updated_at === lastRouletteStateAt) return;
+    if (state.phase === "idle") return;
 
     lastRouletteStateAt = state.updated_at;
     const candidates = Array.isArray(state.roulette_candidates) ? state.roulette_candidates : [];
@@ -784,6 +836,9 @@
       if (state.phase === "playing") {
         rouletteNow.innerHTML = `<strong>${escapeHtml(state.selected_user || "-")}</strong>${escapeHtml(state.selected_track || "-")} を再生中`;
         rouletteCenter.textContent = state.selected_user || "当選";
+      } else if (state.phase === "settling") {
+        rouletteNow.innerHTML = `<strong>抽選中</strong>${escapeHtml(state.message || "当選位置までゆっくり停止します。")}`;
+        rouletteCenter.textContent = "抽選中";
       } else if (state.phase === "result" || state.status === "no_track") {
         rouletteNow.innerHTML = `<strong>${escapeHtml(state.selected_user || "-")}</strong>${escapeHtml(state.message || "選曲しました。")}`;
         rouletteCenter.textContent = state.status === "no_track" ? "曲なし" : "結果";
@@ -1039,6 +1094,7 @@
         "ルーレットで当選者を選びました。",
         `ユーザー: ${data.selected_user || "-"}`,
         `当選確率: ${Math.round((Number(data.probability) || 0) * 1000) / 10}%`,
+        data.excluded_user_name ? `今回除外: ${data.excluded_user_name}` : null,
       ].filter(Boolean).join("\n");
     }
 
