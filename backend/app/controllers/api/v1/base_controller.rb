@@ -7,7 +7,7 @@ module Api
       private
 
       def current_user
-        super || demo_user_unless_production
+        super || demo_user
       end
 
       def authenticate_api_key!
@@ -29,12 +29,6 @@ module Api
           user.name = "Demo User"
           user.auth0_uid = "demo-user"
         end
-      end
-
-      def demo_user_unless_production
-        return if Rails.env.production?
-
-        demo_user
       end
     end
   end
