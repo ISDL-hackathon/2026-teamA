@@ -2,7 +2,7 @@ module Api
   module V1
     class PhotosController < BaseController
       def index
-        photos = current_user.portal_photos.order(created_at: :desc)
+        photos = PortalPhoto.order(created_at: :desc)
         render json: {
           status: "success",
           photos: photos.map { |photo| photo_json(photo) },
