@@ -97,6 +97,14 @@ def post_scan(idm: str) -> None:
             print(f"{payload['timestamp']} {payload['user_name']} {payload['action']} ({idm})")
     except urllib.error.HTTPError as error:
         message = error.read().decode("utf-8", errors="replace")
+        try:
+            payload = json.loads(message)
+        except json.JSONDecodeError:
+            payload = {}
+        if payload.get("code") == "CARD_NOT_FOUND":
+            rejected_idm = payload.get("idm", idm)
+            print(f"unregistered card: {rejected_idm}. Register this IDm to a user.", file=sys.stderr)
+            return
         print(f"scan rejected for {idm}: HTTP {error.code} {message}", file=sys.stderr)
     except urllib.error.URLError as error:
         print(f"scan failed for {idm}: {error}", file=sys.stderr)

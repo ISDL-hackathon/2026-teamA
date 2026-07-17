@@ -113,24 +113,24 @@
 
   <nav class="portal-sidebar" aria-label="機能メニュー">
     <button class="portal-action btn btn-outline justify-start" type="button" data-open-music>
-      <span>音楽</span>
+      <span>Music</span>
       楽曲検索・登録
     </button>
     <button class="portal-action btn btn-outline justify-start" type="button" data-open-card>
-      <span>カード</span>
-      カード登録
+      <span>IC Card</span>
+      ICカード再登録
     </button>
     <button class="portal-action btn btn-outline justify-start" type="button" data-open-photo>
-      <span>写真</span>
+      <span>Photo</span>
       写真を追加
     </button>
     <button class="portal-action btn btn-outline justify-start" type="button" data-open-stay>
-      <span>滞在</span>
-      滞在ログ
+      <span>Stay</span>
+      滞在時間ダッシュボード
     </button>
     <% if @spotify_connected %>
       <button class="portal-action btn btn-outline justify-start" type="button" data-open-queue>
-        <span>選曲</span>
+        <span>Select</span>
         選曲実行（ルーレット開始）
       </button>
     <% end %>
@@ -598,22 +598,33 @@
   }
 
   document.getElementById("card-register-button").addEventListener("click", async () => {
-    const idm = document.getElementById("card-idm-input").value.trim();
+    const input = document.getElementById("card-idm-input");
+    const button = document.getElementById("card-register-button");
+    const idm = input.value.trim();
     if (!idm) return setStatus("IDm を入力してください");
 
-    const response = await fetch(`${apiBase}/cards`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idm }),
-    });
-    const data = await response.json();
-    if (data.status === "success") {
-      setStatus("IDmを再設定しました");
-      closeCardModal();
-      document.getElementById("card-idm-input").value = data.card?.idm || idm;
-      document.getElementById("card-idm-input").dataset.currentIdm = data.card?.idm || idm;
-    } else {
-      setStatus(data.message);
+    button.disabled = true;
+    try {
+      const response = await fetch(`${apiBase}/cards`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idm }),
+      });
+      const data = await response.json();
+      if (data.status === "success") {
+        const registeredIdm = data.card?.idm || idm;
+        setStatus("IDmをログイン中のユーザーに再設定しました");
+        closeCardModal();
+        input.value = registeredIdm;
+        input.dataset.currentIdm = registeredIdm;
+      } else {
+        setStatus(data.message || "IDmを再設定できませんでした");
+      }
+    } catch {
+      setStatus("IDmを再設定できませんでした");
+    } finally {
+      button.disabled = false;
     }
   });
 

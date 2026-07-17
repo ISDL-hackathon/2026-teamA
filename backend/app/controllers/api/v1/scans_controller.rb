@@ -8,7 +8,14 @@ module Api
         return render_error("IDm is required", "IDM_REQUIRED", :bad_request) if idm.blank?
 
         card = FelicaCard.find_by(idm: idm)
-        return render_error("User not found for this card", "CARD_NOT_FOUND", :not_found) unless card
+        unless card
+          return render json: {
+            status: "error",
+            message: "User not found for this card",
+            code: "CARD_NOT_FOUND",
+            idm: idm
+          }, status: :not_found
+        end
 
         log = RoomAccessService.new(card.user).record!
         playback_result = log.in? ? select_and_play_next_track(card.user) : nil
