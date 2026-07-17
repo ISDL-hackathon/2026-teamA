@@ -8,6 +8,7 @@ Type=simple
 User=pi
 WorkingDirectory=/home/pi/2026-teamA
 EnvironmentFile=/home/pi/2026-teamA/scripts/pasori-reader.env
+Environment=PYTHONUNBUFFERED=1
 ExecStart=/usr/bin/python3 /home/pi/2026-teamA/scripts/pasori_rcs300_reader.py
 Restart=always
 RestartSec=5

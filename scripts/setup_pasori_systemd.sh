@@ -42,6 +42,7 @@ Type=simple
 User=${USER}
 WorkingDirectory=${REPO_DIR}
 EnvironmentFile=${ENV_FILE}
+Environment=PYTHONUNBUFFERED=1
 ExecStart=${VENV_PYTHON} ${SCRIPT_DIR}/pasori_rcs300_reader.py
 Restart=always
 RestartSec=5

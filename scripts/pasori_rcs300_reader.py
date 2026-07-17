@@ -25,10 +25,15 @@ POLL_INTERVAL_SECONDS = float(os.getenv("PASORI_POLL_INTERVAL", "0.5"))
 COOLDOWN_SECONDS = float(os.getenv("PASORI_SCAN_COOLDOWN", "8"))
 
 
+def log(message: str, *, error: bool = False) -> None:
+    print(message, file=sys.stderr if error else sys.stdout, flush=True)
+
+
 def main() -> int:
     reader = find_reader()
-    print(f"Using reader: {reader}")
-    print(f"Posting scans to: {API_URL}")
+    log(f"Using reader: {reader}")
+    log(f"Posting scans to: {API_URL}")
+    log("Waiting for card scans...")
 
     last_idm = None
     last_scan_at = 0.0
@@ -51,6 +56,7 @@ def main() -> int:
 
         last_idm = idm
         last_scan_at = now
+        log(f"card read: {idm}")
         post_scan(idm)
         time.sleep(POLL_INTERVAL_SECONDS)
 
@@ -58,7 +64,7 @@ def main() -> int:
 def find_reader():
     available_readers = readers()
     if not available_readers:
-        print("No PC/SC reader found. Connect RC-S300 and install the Sony NFC Port Software.", file=sys.stderr)
+        log("No PC/SC reader found. Connect RC-S300 and install the Sony NFC Port Software.", error=True)
         raise SystemExit(1)
 
     for reader in available_readers:
@@ -96,7 +102,7 @@ def post_scan(idm: str) -> None:
     try:
         with urllib.request.urlopen(request, timeout=5) as response:
             payload = json.loads(response.read().decode("utf-8"))
-            print(f"{payload['timestamp']} {payload['user_name']} {payload['action']} ({idm})")
+            log(f"{payload['timestamp']} {payload['user_name']} {payload['action']} ({idm})")
     except urllib.error.HTTPError as error:
         message = error.read().decode("utf-8", errors="replace")
         try:
@@ -105,11 +111,11 @@ def post_scan(idm: str) -> None:
             payload = {}
         if payload.get("code") == "CARD_NOT_FOUND":
             rejected_idm = payload.get("idm", idm)
-            print(f"unregistered card: {rejected_idm}. Register this IDm to a user.", file=sys.stderr)
+            log(f"unregistered card: {rejected_idm}. Register this IDm to a user.", error=True)
             return
-        print(f"scan rejected for {idm}: HTTP {error.code} {message}", file=sys.stderr)
+        log(f"scan rejected for {idm}: HTTP {error.code} {message}", error=True)
     except urllib.error.URLError as error:
-        print(f"scan failed for {idm}: {error}", file=sys.stderr)
+        log(f"scan failed for {idm}: {error}", error=True)
 
 
 if __name__ == "__main__":
