@@ -74,6 +74,8 @@ def read_idm(reader) -> str:
 
     # PC/SC GET DATA. For FeliCa cards this returns the 8-byte IDm on RC-S300.
     data, sw1, sw2 = connection.transmit([0xFF, 0xCA, 0x00, 0x00, 0x00])
+    if (sw1, sw2) == (0x69, 0x85):
+        raise NoCardException("no card is ready to read")
     if (sw1, sw2) != (0x90, 0x00):
         raise CardConnectionException(f"failed to read IDm: SW={sw1:02X}{sw2:02X}")
 
