@@ -2,7 +2,7 @@ module Api
   module V1
     class BaseController < ApplicationController
       skip_before_action :verify_authenticity_token
-      skip_before_action :authenticate_basic_auth_if_enabled
+      
 
       private
 
