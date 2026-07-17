@@ -4,7 +4,7 @@ class FelicaCard < ApplicationRecord
   before_validation :normalize_idm
 
   validates :idm, presence: true, uniqueness: true
-  validates :idm, format: { with: /\A\h{16}\z/, message: "must be 16 hexadecimal characters" }, allow_blank: true
+  validates :idm, format: { with: /\A\h{16,17}\z/, message: "must be 16 or 17 hexadecimal characters" }, allow_blank: true
 
   def self.normalize_idm(value)
     value.to_s.upcase.gsub(/[^0-9A-F]/, "")
