@@ -546,9 +546,9 @@ function drawRoomRoulette() {
 
   ctx.fillStyle = "#f8fafc";
   ctx.beginPath();
-  ctx.moveTo(cx, cy - radius - 36);
-  ctx.lineTo(cx - 24, cy - radius + 18);
-  ctx.lineTo(cx + 24, cy - radius + 18);
+  ctx.moveTo(cx, cy - radius + 18);
+  ctx.lineTo(cx - 24, cy - radius - 36);
+  ctx.lineTo(cx + 24, cy - radius - 36);
   ctx.closePath();
   ctx.fill();
 
