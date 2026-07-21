@@ -1,4 +1,10 @@
 # TeamA
+# pasori パソコン接続時コマンド
+```bash
+$env:ROOM_PORTAL_SCAN_URL="https://p01--isdl--9ww4ft9snnpn.code.run/api/v1/scan"
+$env:API_KEY="　　"
+py scripts\pasori_rcs300_reader.py
+```
 
 # 開発環境セットアップ
 
